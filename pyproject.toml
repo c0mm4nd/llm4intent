@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "llm4intent"
+version = "0.1.0"
+description = ""
+authors = ["Command <me@c0mm4nd.com>"]
+readme = "README.md"
+packages = [
+    { include = "LLM4Intent" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.13"
+autogen-agentchat = ">=0.2,<0.3"
+python-dotenv = "1.0.1"
+web3 = "6.20.3"
+web3research = {git = "https://github.com/njublockchain/web3research-py"}
+groq = {git = "https://github.com/groq/groq-python.git", rev = "generated"}
+
+
+[tool.poetry.scripts]
+start = "LLM4Intent.__main__:start"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
