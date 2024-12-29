@@ -9,16 +9,25 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.13"
-autogen-agentchat = ">=0.2,<0.3"
+python = ">=3.11,<3.13"
+autogen-agentchat = {version = ">=0.2,<1.0", extras = ["gemini"]}
 python-dotenv = "1.0.1"
 web3 = "6.20.3"
 web3research = {git = "https://github.com/njublockchain/web3research-py"}
 groq = {git = "https://github.com/groq/groq-python.git", rev = "generated"}
+flaml = {extras = ["automl"], version = "^2.3.2"}
+langchain = "^0.3.13"
+langchain-core = "^0.3.28"
+langchain-community = "^0.3.13"
+langgraph = "^0.2.60"
+langchain-google = "^0.1.1"
+langchain-google-genai = "^2.0.7"
+aioetherscan = "^0.9.4"
 
 
 [tool.poetry.scripts]
-start = "LLM4Intent.__main__:start"
+autogen = "LLM4Intent.autogen_mas:start_agents"
+langgraph = "LLM4Intent.langgraph_mas:start_agents"
 
 [build-system]
 requires = ["poetry-core"]

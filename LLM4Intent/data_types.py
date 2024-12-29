@@ -94,3 +94,72 @@ class ContractContext(TypedDict):
     pass
 
 # class FlowContext(TypedDict):
+
+class SemanticTransaction(TransactionWithLogsTraces):
+    '''
+    use human language to describe a transaction
+    '''
+
+    def __repr__(self):
+        assert self.get("status") == 1, "Transaction is failed"
+        template = """
+Transaction {hash} called by {from_address} to {to_address} with value {value}, gas used {gas}, price {gas_price}, 
+with logs as the following:
+\t{logs}
+and traces as the following:
+\t{traces}
+"""
+        semantic_logs = []
+        for log in self["logs"]:
+            semantic_logs.append(SemanticEventLog(log))
+        semantic_traces = []
+        for trace in self["traces"]:
+            semantic_traces.append(SemanticTrace(trace))
+        
+        return template.format(
+            hash=self["hash"],
+            from_address=self["from"],
+            to_address=self["to"],
+            value=self["value"],
+            gas=self["gas"],
+            gas_price=self.get("gasPrice"),
+            logs="\n\t".join([str(log) for log in semantic_logs]),
+            traces="\n\t".join([str(trace) for trace in semantic_traces]),
+        )
+
+class SemanticEventLog(EventLog):
+    '''
+    use human language to describe an event log
+    '''
+
+    def __repr__(self):
+        template = """
+EventLog {logIndex} in block {blockNumber} at {blockTimestamp} with topics {topics} and data {data}
+"""
+        
+        return template.format(
+            logIndex=self["logIndex"],
+            blockNumber=self["blockNumber"],
+            blockTimestamp=self["blockTimestamp"],
+            topics=self["topics"],
+            data=self["data"],
+        )
+
+class SemanticTrace(Trace):
+    '''
+    use human language to describe a trace
+    '''
+
+    def __repr__(self):
+        template = """
+Trace {traceAddress} in block {blockNumber} at {blockTimestamp} with subtraces {subtraces} and actionType {actionType}
+"""
+
+        return template.format(
+            traceAddress=self["traceAddress"],
+            blockNumber=self["blockNumber"],
+            blockTimestamp=self["blockTimestamp"],
+            subtraces=self.get("subtraces", 0),
+            actionType=self["actionType"],
+        )
+
