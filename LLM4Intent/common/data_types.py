@@ -1,5 +1,5 @@
 from typing import List, TypedDict
-
+from .intent_defination import Intent
 
 Transaction = TypedDict(
     "Transaction",

@@ -1,0 +1,166 @@
+import json
+from LLM4Intent.tools.jsonrpc import *
+
+vitalik_EOA_address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+WETH_contract_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+
+
+# decorator to check if the function returns a jsonable object
+def check_jsonable(result):
+    assert json.dumps(result)
+
+
+def test_get_transaction_from_jsonrpc() -> str:
+    check_jsonable(
+        get_transaction_from_jsonrpc(
+            "0x43a2cb2a2a4fa683a67db6f828d2db99e1253a33a8eb1032915e50f71d85a9f0"
+        )
+    )
+
+
+def test_get_transaction_receipt_from_jsonrpc() -> str:
+    check_jsonable(
+        get_transaction_receipt_from_jsonrpc(
+            "0x43a2cb2a2a4fa683a67db6f828d2db99e1253a33a8eb1032915e50f71d85a9f0"
+        )
+    )
+
+
+def test_get_transaction_trace_from_jsonrpc() -> str:
+    check_jsonable(
+        get_transaction_trace_from_jsonrpc(
+            "0x43a2cb2a2a4fa683a67db6f828d2db99e1253a33a8eb1032915e50f71d85a9f0"
+        )
+    )
+
+
+def test_get_address_eth_balance_at_block_number_from_json() -> int:
+    check_jsonable(
+        get_address_eth_balance_at_block_number_from_json(
+            vitalik_EOA_address, 20_000_000
+        )
+    )
+
+
+def test_get_address_transactions_within_block_number_range_from_jsonrpc() -> str:
+    check_jsonable(
+        get_address_transactions_within_block_number_range_from_jsonrpc(
+            vitalik_EOA_address, 20_000_000 - 10, 20_000_000
+        )
+    )
+
+
+def test_get_address_ERC20_token_balance_at_block_number_from_jsonrpc() -> int:
+    check_jsonable(
+        get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
+            vitalik_EOA_address, WETH_contract_address, 20_000_000
+        )
+    )
+
+
+def test_get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc() -> (
+    str
+):
+    check_jsonable(
+        get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+            vitalik_EOA_address, 20_000_000 - 10, 20_000_000
+        )
+    )
+
+
+# def test_get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable(get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
+#         vitalik_EOA_address, 20_000_000 - 10, 20_000_000
+#     )
+
+
+# def test_get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable((
+#         get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
+#             vitalik_EOA_address, 20_000_000 - 10, 20_000_000
+#         )
+#     )
+
+
+# def test_get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable((
+#         get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
+#             vitalik_EOA_address, 20_000_000 - 10, 20_000_000
+#         )
+#     )
+
+
+def test_get_contract_code_at_block_number_from_jsonrpc() -> str:
+    check_jsonable(
+        get_contract_code_at_block_number_from_jsonrpc(vitalik_EOA_address, 20_000_000)
+    )
+
+
+def test_get_contract_storage_at_block_number_from_jsonrpc() -> str:
+    check_jsonable(
+        get_contract_storage_at_block_number_from_jsonrpc(
+            WETH_contract_address, 0, 20_000_000
+        )
+    )
+
+
+def test_get_contract_events_within_block_number_range_from_jsonrpc() -> str:
+    check_jsonable(
+        get_contract_events_within_block_number_range_from_jsonrpc(
+            WETH_contract_address, 20_000_000 - 10, 20_000_000
+        )
+    )
+
+
+def test_get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc() -> (
+    str
+):
+    check_jsonable(
+        get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+            WETH_contract_address, 20_000_000 - 10, 20_000_000
+        )
+    )
+
+
+# def test_get_contract_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable(get_contract_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
+#         WETH_contract_address, 20_000_000 - 10, 20_000_000
+#     )
+
+
+# def test_get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable(get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
+#         WETH_contract_address, 20_000_000 - 10, 20_000_000
+#     )
+
+
+# def test_get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc() -> (
+#     str
+# ):
+#     check_jsonable((
+#         get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
+#             WETH_contract_address, 20_000_000 - 10, 20_000_000
+#         )
+#     )
+
+
+def test_get_contract_basic_info_from_jsonrpc() -> str:
+    check_jsonable(
+        get_contract_basic_info_from_jsonrpc(
+            "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        )
+    )
+
+
+def test_get_contract_ABI_from_whatsabi() -> str:
+    pass
