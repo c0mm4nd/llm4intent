@@ -1,3 +1,4 @@
+import string
 import pytest
 from typing import List, TypedDict, Optional
 from web3 import Web3, HTTPProvider
@@ -20,7 +21,7 @@ def _try_w3_call_fetch_str(
 ) -> str:
     try:
         utf8 = w3.eth.call(transaction=transaction, block_identifier=block_identifier)
-        return Web3.to_text(utf8)
+        return ''.join(filter(lambda x: x in string.printable, Web3.to_text(utf8))).strip()
     except Exception as e:
         print(e)
         return None
@@ -44,28 +45,28 @@ def _try_w3_call_fetch_int(
 
 
 def get_transaction_from_jsonrpc(tx_hash: str) -> str:
-    '''
+    """
     Get raw transaction details from ethereum node's JSON-RPC API
 
     Args:
         tx_hash (str): transaction hash
-    
+
     Returns:
         str: raw transaction details in JSON format string
-    '''
+    """
     return Web3.to_json(w3.eth.get_transaction(tx_hash))
 
 
 def get_transaction_receipt_from_jsonrpc(tx_hash: str) -> str:
-    '''
+    """
     Get transaction receipt from ethereum node's JSON-RPC API
 
     Args:
         tx_hash (str): transaction hash
-    
+
     Returns:
         str: transaction receipt in JSON format string
-    '''
+    """
     return Web3.to_json(w3.eth.get_transaction_receipt(tx_hash))
 
 
@@ -318,43 +319,43 @@ class ContractBasicProperties(TypedDict):
 def get_contract_basic_info_from_jsonrpc(
     contract_address: str,
 ) -> ContractBasicProperties:
-    return {
-        "name": _try_w3_call_fetch_str(
+    return ContractBasicProperties(
+        name=_try_w3_call_fetch_str(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="name()").hex()[:10],
             }
         )
         or "Not available",
-        "symbol": _try_w3_call_fetch_str(
+        symbol=_try_w3_call_fetch_str(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="symbol()").hex()[:10],
             }
         )
         or "Not available",
-        "total_supply": _try_w3_call_fetch_int(
+        total_supply=_try_w3_call_fetch_int(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="totalSupply()").hex()[:10],
             }
         )
         or "Not available",
-        "decimals": _try_w3_call_fetch_int(
+        decimals=_try_w3_call_fetch_int(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="decimals()").hex()[:10],
             }
         )
         or "Not available",
-        "owner": _try_w3_call_fetch_str(
+        owner=_try_w3_call_fetch_str(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="owner()").hex()[:10],
             }
         )
         or "Not available",
-    }
+    )
 
 
 def get_contract_ABI_from_whatsabi(

@@ -157,10 +157,16 @@ def test_get_contract_ERC20_token_transfers_within_block_number_range_from_jsonr
 def test_get_contract_basic_info_from_jsonrpc() -> str:
     check_jsonable(
         get_contract_basic_info_from_jsonrpc(
-            "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+            "0x47293Fe9dE5546A2D3Fc44F52a1C383075cDcd62"
         )
     )
 
+    contract_basic_info = get_contract_basic_info_from_jsonrpc(
+        "0x47293Fe9dE5546A2D3Fc44F52a1C383075cDcd62"
+    )
+    print(contract_basic_info)
+
+    assert contract_basic_info["name"] == "ELON MARS"
 
 def test_get_contract_ABI_from_whatsabi() -> str:
     pass
