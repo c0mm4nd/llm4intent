@@ -167,6 +167,10 @@ def test_get_contract_basic_info_from_jsonrpc() -> str:
     print(contract_basic_info)
 
     assert contract_basic_info["name"] == "ELON MARS"
+    assert contract_basic_info["symbol"] == "ELONMARS"
+    assert contract_basic_info["decimals"] == 9
+    assert contract_basic_info["owner"] == "0x" + "0" * 40
+    assert contract_basic_info["total_supply"] == 420000000000000000000000
 
 def test_get_contract_ABI_from_whatsabi() -> str:
     pass

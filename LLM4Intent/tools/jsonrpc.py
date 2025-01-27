@@ -40,6 +40,19 @@ def _try_w3_call_fetch_int(
         print(e)
         return None
 
+def _try_w3_call_fetch_address(
+    transaction: TxParams,
+    block_identifier: Optional[BlockIdentifier] = None,
+) -> str:
+    try:
+        raw_address = w3.eth.call(
+            transaction=transaction, block_identifier=block_identifier
+        )
+        raw_address = raw_address[-20:]
+        return Web3.to_checksum_address(raw_address)
+    except Exception as e:
+        print(e)
+        return None
 
 ####################### TRANSACTION INFO #######################
 
@@ -348,7 +361,7 @@ def get_contract_basic_info_from_jsonrpc(
             }
         )
         or "Not available",
-        owner=_try_w3_call_fetch_str(
+        owner=_try_w3_call_fetch_address(
             {
                 "to": contract_address,
                 "data": w3.keccak(text="owner()").hex()[:10],
