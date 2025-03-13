@@ -1,0 +1,63 @@
+{
+  "Core Category": {
+    "1. Economic Profit-Driven": {
+      "1.1 Maximizing Investment Returns": {
+        "1.1.1 Trading Profits": "Earning profits by buying low and selling high on centralized (CEX) or decentralized exchanges (DEX) through price fluctuations in tokens, NFTs, and other assets.",
+        "1.1.2 Liquidity Mining/Yield Farming": "Providing liquidity to DeFi protocols (such as lending platforms and DEXs) by creating or joining liquidity pools, earning trading fees, platform token rewards, or interest.",
+        "1.1.3 Staking Rewards": "Earning network rewards, project token incentives, voting rights, or platform benefits by staking tokens or NFTs.",
+        "1.1.4 Airdrop/Presale/IFO Participation": "Obtaining low-cost or free tokens by participating in early-stage project events such as airdrops, presales, or Initial Farm Offerings (IFO).",
+        "1.1.5 Arbitrage": "Exploiting price differences across platforms or markets through cross-platform or cross-protocol trading.",
+        "1.1.6 Leverage Trading": "Using borrowed funds to amplify trade size in an attempt to maximize returns from market movements (while also increasing risk).",
+        "1.1.7 Long-Term Holding": "Holding tokens or NFTs for an extended period based on long-term value expectations, anticipating price appreciation.",
+        "1.1.8 Yield Aggregation": "Using automated tools or strategies to transfer assets across different DeFi protocols to maximize yield.",
+        "1.1.9 Transaction Fee Optimization": "Reducing costs by executing transactions during periods of lower gas fees or using networks with lower transaction costs, such as Layer 2 solutions.",
+        "1.1.10 Slippage Control": "Setting slippage tolerance in DEX trading to control transaction costs.",
+        "1.1.11 Batch Trading": "Consolidating multiple trades into a single transaction or using batch operation tools to reduce transaction count and total gas fees."
+      }
+    },
+    "2. Risk Control & Management": {
+      "2.1 Asset Security": {
+        "2.1.1 Using Secure Wallets": "Using multi-signature wallets to store and manage assets, reducing the risk of private key leaks.",
+        "2.1.2 Permission Management": "Regularly reviewing and revoking permissions granted to untrusted or unused smart contracts to prevent unauthorized access.",
+        "2.1.3 Purchasing Insurance": "Buying decentralized insurance to cover risks such as smart contract vulnerabilities or project failures."
+      },
+      "2.2 Investment Risk Management": {
+        "2.2.1 Diversification": "Allocating funds across multiple assets or projects to mitigate risks associated with any single asset or project failure.",
+        "2.2.2 Stop-Loss Strategies": "Setting stop-loss orders to automatically sell assets when prices drop to a predetermined level, limiting losses.",
+        "2.2.3 Hedging Strategies": "Using derivatives (such as options or futures) or lending protocols to hedge against market risks."
+      }
+    },
+    "3. Project Participation & Governance": {
+      "3.1 Governance Participation": {
+        "3.1.1 Voting": "Using governance tokens to vote on project proposals and influence project direction.",
+        "3.1.2 Proposal Submission": "Submitting proposals to the community to contribute to project development.",
+        "3.1.3 Delegating Voting Power": "Delegating voting rights to trusted representatives or nodes."
+      },
+      "3.2 Project Support": {
+        "3.2.1 Bug Bounty": "Identifying and reporting security vulnerabilities or bugs to the project team."
+      },
+      "3.3 Gaining Special Privileges": {
+        "3.3.1 Whitelist Acquisition": "Participating in project activities to gain whitelist privileges, allowing early access to presales, NFT minting, etc."
+      }
+    },
+    "4. Malicious or Illegal Profiteering": {
+      "4.1 Fraud & Scams": {
+        "4.1.1 Rug Pull": "Creating and launching fake projects or tokens to lure investors, then withdrawing all liquidity and exiting the market.",
+        "4.1.2 Phishing Attacks": "Setting up phishing websites or applications to steal users' private keys or assets.",
+        "4.1.3 Exploiting Smart Contract Vulnerabilities": "Taking advantage of smart contract weaknesses to steal user or project assets."
+      },
+      "4.2 Market Manipulation": {
+        "4.2.1 Front-Running": "Using bots to monitor the mempool and execute transactions ahead of regular users to gain profits.",
+        "4.2.2 Sandwich Attack": "Placing buy and sell orders around a large trade to create artificial price movements and profit from the spread.",
+        "4.2.3 Pump and Dump": "Driving up token prices through large purchases to attract retail investors, then selling at a high price to exit profitably."
+      },
+      "4.3 Money Laundering": {
+        "4.3.1 Coin Mixing": "Using mixing services (such as Tornado Cash) to obscure the origin and destination of funds.",
+        "4.3.2 Dispersed Transfers": "Moving assets across multiple wallet addresses through small transactions to obfuscate financial trails."
+      },
+      "4.4 Smart Contract Attacks": {
+        "4.4.1 Hacking": "Exploiting vulnerabilities in smart contracts to execute malicious actions, such as stealing funds or disrupting protocols."
+      }
+    }
+  }
+}

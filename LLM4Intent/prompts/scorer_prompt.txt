@@ -1,0 +1,8 @@
+ROLE: You are the intent_scorer.
+ACTION: Score the analyzed intent from the following categories: {categories}
+
+Wrap the output in `json` tags with the structure of ScoreReport.
+
+<SCOREREPORT_SCHEMA>
+{score_report_schema}
+</SCOREREPORT_SCHEMA>

@@ -1,6 +1,7 @@
 import string
-import pytest
-from typing import List, TypedDict, Optional
+from typing import Any, Dict, List, TypedDict, Optional
+import requests
+import json
 from web3 import Web3, HTTPProvider
 from web3.types import (
     TxData,
@@ -11,7 +12,8 @@ from web3.types import (
     BlockIdentifier,
 )
 
-w3 = Web3(HTTPProvider("http://localhost:8545"))
+w3 = Web3(HTTPProvider("http://172.28.1.2:8545"))
+# w3 = Web3(HTTPProvider("https://rpc.ankr.com/eth"))
 
 
 # 用于安全地调用智能合约并转换返回值
@@ -21,9 +23,11 @@ def _try_w3_call_fetch_str(
 ) -> str:
     try:
         utf8 = w3.eth.call(transaction=transaction, block_identifier=block_identifier)
-        return ''.join(filter(lambda x: x in string.printable, Web3.to_text(utf8))).strip()
+        return "".join(
+            filter(lambda x: x in string.printable, Web3.to_text(utf8))
+        ).strip()
     except Exception as e:
-        print(e)
+        print("failed to fetch str", e)
         return None
 
 
@@ -37,8 +41,9 @@ def _try_w3_call_fetch_int(
         )
         return Web3.to_int(raw_bigint)
     except Exception as e:
-        print(e)
+        print("failed to fetch int", e)
         return None
+
 
 def _try_w3_call_fetch_address(
     transaction: TxParams,
@@ -51,13 +56,14 @@ def _try_w3_call_fetch_address(
         raw_address = raw_address[-20:]
         return Web3.to_checksum_address(raw_address)
     except Exception as e:
-        print(e)
+        print("failed to fetch address", e)
         return None
+
 
 ####################### TRANSACTION INFO #######################
 
 
-def get_transaction_from_jsonrpc(tx_hash: str) -> str:
+def get_transaction_from_jsonrpc(tx_hash: str) -> dict:
     """
     Get raw transaction details from ethereum node's JSON-RPC API
 
@@ -65,27 +71,74 @@ def get_transaction_from_jsonrpc(tx_hash: str) -> str:
         tx_hash (str): transaction hash
 
     Returns:
-        str: raw transaction details in JSON format string
+        dict: transaction details
     """
-    return Web3.to_json(w3.eth.get_transaction(tx_hash))
+    return json.loads(Web3.to_json(w3.eth.get_transaction(tx_hash)))
 
 
-def get_transaction_receipt_from_jsonrpc(tx_hash: str) -> str:
+def get_transaction_receipt_without_logs_from_jsonrpc(tx_hash: str) -> dict:
     """
-    Get transaction receipt from ethereum node's JSON-RPC API
+    Get transaction receipt **without logs** from ethereum node's JSON-RPC API
 
     Args:
         tx_hash (str): transaction hash
 
     Returns:
-        str: transaction receipt in JSON format string
+        dict: transaction receipt without logs
     """
-    return Web3.to_json(w3.eth.get_transaction_receipt(tx_hash))
+    receipt = w3.eth.get_transaction_receipt(tx_hash)
+    receipt = dict(receipt)
+    del receipt["logs"]
+    return json.loads(Web3.to_json(receipt))
+
+
+def get_transaction_receipt_logs_length_from_jsonrpc(tx_hash: str) -> dict:
+    """
+    Get transaction receipt **without logs** from ethereum node's JSON-RPC API
+
+    Args:
+        tx_hash (str): transaction hash
+
+    Returns:
+        str: transaction receipt logs length in JSON format string
+    """
+    return json.loads(
+        Web3.to_json(len(w3.eth.get_transaction_receipt(tx_hash)["logs"]))
+    )
+
+
+def get_transaction_receipt_logs_with_index_range_from_jsonrpc(
+    tx_hash: str, from_index: int, to_index: int
+) -> dict:
+    """
+    Get transaction receipt logs with index range from ethereum node's JSON-RPC API
+
+    Args:
+        tx_hash (str): transaction hash
+        from_index (int): starting index
+        to_index (int): ending index
+
+    Returns:
+        str: transaction receipt logs in JSON format string
+    """
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_transaction_receipt(tx_hash)["logs"][from_index:to_index]
+        )
+    )
 
 
 # 交易追踪信息
-def get_transaction_trace_from_jsonrpc(tx_hash: str) -> str:
-    return Web3.to_json(w3.tracing.trace_transaction(tx_hash))
+def get_transaction_trace_length_from_jsonrpc(tx_hash: str) -> dict:
+    return json.loads(Web3.to_json(len(w3.tracing.trace_transaction(tx_hash))))
+
+
+def get_transaction_trace_with_index_range_from_jsonrpc(
+    tx_hash: str, from_index: int, to_index: int
+) -> dict:
+    return json.loads(
+        Web3.to_json(w3.tracing.trace_transaction(tx_hash)[from_index:to_index])
+    )
 
 
 ####################### ADDRESS INFO #######################
@@ -95,13 +148,15 @@ def get_transaction_trace_from_jsonrpc(tx_hash: str) -> str:
 def get_address_eth_balance_at_block_number_from_json(
     address: str, block_number: int
 ) -> int:
-    return Web3.to_json(w3.eth.get_balance(address, block_number))
+    address = Web3.to_checksum_address(address)
+    return json.loads(Web3.to_json(w3.eth.get_balance(address, block_number)))
 
 
 # 查询地址交易历史
 def get_address_transactions_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[TxData]:
+    address = Web3.to_checksum_address(address)
     txs = []
     for block_number in range(from_block_number, to_block_number + 1):
         for tx_hash in w3.eth.get_block(block_number)["transactions"]:
@@ -109,22 +164,25 @@ def get_address_transactions_within_block_number_range_from_jsonrpc(
             if tx["from"] == address or tx["to"] == address:
                 txs.append(tx)
 
-    return Web3.to_json(txs)
+    return json.loads(Web3.to_json(txs))
 
 
 # 查询 ERC20 代币余额和转账历史
 def get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
     address: str, contract_address: str, block_number: int
 ) -> int:
-    return Web3.to_json(
-        w3.eth.call(
-            {
-                "to": contract_address,
-                "data": Web3.keccak(text="balanceOf(address)").hex()[:10]
-                + "0" * 24
-                + Web3.to_bytes(hexstr=address).hex(),
-            },
-            block_number,
+    address = Web3.to_checksum_address(address)
+    return json.loads(
+        Web3.to_json(
+            w3.eth.call(
+                {
+                    "to": contract_address,
+                    "data": Web3.keccak(text="balanceOf(address)").hex()[:10]
+                    + "0" * 24
+                    + Web3.to_bytes(hexstr=address).hex(),
+                },
+                block_number,
+            )
         )
     )
 
@@ -132,17 +190,21 @@ def get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
 def get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[LogReceipt]:
-    return Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "topics": [
-                    Web3.keccak(text="Transfer(address,address,uint256)").hex(),
-                    "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
-                    # None,
-                ],
-            }
+    address = Web3.to_checksum_address(address)
+
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "topics": [
+                        Web3.keccak(text="Transfer(address,address,uint256)").hex(),
+                        "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
+                        # None,
+                    ],
+                }
+            )
         )
     )
 
@@ -151,17 +213,21 @@ def get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
 def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[LogReceipt]:
-    return Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "topics": [
-                    Web3.keccak(text="Transfer(address,address,uint256)").hex(),
-                    "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
-                    None,
-                ],
-            }
+    address = Web3.to_checksum_address(address)
+
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "topics": [
+                        Web3.keccak(text="Transfer(address,address,uint256)").hex(),
+                        "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
+                        None,
+                    ],
+                }
+            )
         )
     )
 
@@ -170,20 +236,23 @@ def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
 def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
-    return Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "topics": [
-                    Web3.keccak(
-                        text="TransferSingle(address,address,address,uint256,uint256)"
-                    ).hex(),
-                    "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
-                    None,
-                    None,
-                ],
-            }
+    address = Web3.to_checksum_address
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "topics": [
+                        Web3.keccak(
+                            text="TransferSingle(address,address,address,uint256,uint256)"
+                        ).hex(),
+                        "0x" + "0" * 24 + Web3.to_bytes(hexstr=address).hex(),
+                        None,
+                        None,
+                    ],
+                }
+            )
         )
     )
 
@@ -192,6 +261,7 @@ def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_json
 def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
+    address = Web3.to_checksum_address(address)
     return Web3.to_json(
         w3.eth.get_logs(
             {
@@ -217,6 +287,7 @@ def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonr
 def get_contract_code_at_block_number_from_jsonrpc(
     contract_address: str, block_number: int
 ) -> str:
+    contract_address = Web3.to_checksum_address(contract_address)
     return w3.eth.get_code(contract_address, block_identifier=block_number).hex()
 
 
@@ -224,14 +295,18 @@ def get_contract_code_at_block_number_from_jsonrpc(
 def get_contract_storage_at_block_number_from_jsonrpc(
     contract_address: str, position: int, block_number: int
 ) -> str:
+    contract_address = Web3.to_checksum_address(contract_address)
+
     return w3.eth.get_storage_at(contract_address, position, block_number).hex()
 
 
 # 查询合约事件日志
 def get_contract_events_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
-) -> str:
-    return Web3.to_json(
+) -> list:
+    contract_address = Web3.to_checksum_address(contract_address)
+
+    return json.loads(Web3.to_json(
         w3.eth.get_logs(
             {
                 "fromBlock": from_block_number,
@@ -239,14 +314,27 @@ def get_contract_events_within_block_number_range_from_jsonrpc(
                 "address": contract_address,
             }
         )
-    )
+    ))
+
+
+class AddressType:
+    EOA = "EOA"
+    CA = "CA"
+
+
+def get_address_type_from_jsonrpc(address: str) -> str:
+    address = Web3.to_checksum_address(address)
+    code = w3.eth.get_code(address)
+    return AddressType.EOA if code == b"" else AddressType.CA
 
 
 # 查询各类代币标准(ERC20/721/1155)的转账事件
 def get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
-) -> str:
-    return Web3.to_json(
+) -> list:
+    contract_address = Web3.to_checksum_address(contract_address)
+
+    return json.loads(Web3.to_json(
         w3.eth.get_logs(
             {
                 "fromBlock": from_block_number,
@@ -259,13 +347,14 @@ def get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
                 ],
             }
         )
-    )
+    ))
 
 
 def get_contract_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
-) -> List[LogReceipt]:
-    return Web3.to_json(
+) -> list:
+    contract_address = Web3.to_checksum_address(contract_address)
+    return json.loads(Web3.to_json(
         w3.eth.get_logs(
             {
                 "fromBlock": from_block_number,
@@ -278,13 +367,15 @@ def get_contract_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
                 ],
             }
         )
-    )
+    ))
 
 
 def get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
-) -> List[FilterTrace]:
-    return w3.eth.get_logs(
+) -> list:
+    contract_address = Web3.to_checksum_address(contract_address)
+
+    return json.loads(w3.eth.get_logs(
         {
             "fromBlock": from_block_number,
             "toBlock": to_block_number,
@@ -298,13 +389,15 @@ def get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jso
                 None,
             ],
         }
-    )
+    ))
 
 
 def get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
-) -> List[FilterTrace]:
-    return w3.eth.get_logs(
+) -> list:
+    contract_address = Web3.to_checksum_address(contract_address)
+
+    return json.loads(w3.eth.get_logs(
         {
             "fromBlock": from_block_number,
             "toBlock": to_block_number,
@@ -318,7 +411,7 @@ def get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_json
                 None,
             ],
         }
-    )
+    ))
 
 
 class ContractBasicProperties(TypedDict):
@@ -327,11 +420,14 @@ class ContractBasicProperties(TypedDict):
     total_supply: int
     decimals: int
     owner: str
+    may_self_destructed: bool
 
 
 def get_contract_basic_info_from_jsonrpc(
     contract_address: str,
 ) -> ContractBasicProperties:
+    contract_address = Web3.to_checksum_address(contract_address)
+
     return ContractBasicProperties(
         name=_try_w3_call_fetch_str(
             {
@@ -368,17 +464,5 @@ def get_contract_basic_info_from_jsonrpc(
             }
         )
         or "Not available",
-    )
-
-
-def get_contract_ABI_from_whatsabi(
-    contract_address: str, from_block_number: int, to_block_number: int
-) -> List[LogReceipt]:
-    return w3.eth.get_logs(
-        {
-            "fromBlock": from_block_number,
-            "toBlock": to_block_number,
-            "address": contract_address,
-            "topics": [w3.keccak(text="Transfer(address,address,uint256)"), None, None],
-        }
+        may_self_destructed=w3.eth.get_code(contract_address) == b"",
     )
