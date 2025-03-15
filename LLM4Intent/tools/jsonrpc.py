@@ -76,56 +76,18 @@ def get_transaction_from_jsonrpc(tx_hash: str) -> dict:
     return json.loads(Web3.to_json(w3.eth.get_transaction(tx_hash)))
 
 
-def get_transaction_receipt_without_logs_from_jsonrpc(tx_hash: str) -> dict:
+def get_transaction_receipt_from_jsonrpc(tx_hash: str) -> dict:
     """
-    Get transaction receipt **without logs** from ethereum node's JSON-RPC API
+    Get transaction receipt from ethereum node's JSON-RPC API
 
     Args:
         tx_hash (str): transaction hash
 
     Returns:
-        dict: transaction receipt without logs
+        dict: transaction receipt
     """
     receipt = w3.eth.get_transaction_receipt(tx_hash)
-    receipt = dict(receipt)
-    del receipt["logs"]
     return json.loads(Web3.to_json(receipt))
-
-
-def get_transaction_receipt_logs_length_from_jsonrpc(tx_hash: str) -> dict:
-    """
-    Get transaction receipt **without logs** from ethereum node's JSON-RPC API
-
-    Args:
-        tx_hash (str): transaction hash
-
-    Returns:
-        str: transaction receipt logs length in JSON format string
-    """
-    return json.loads(
-        Web3.to_json(len(w3.eth.get_transaction_receipt(tx_hash)["logs"]))
-    )
-
-
-def get_transaction_receipt_logs_with_index_range_from_jsonrpc(
-    tx_hash: str, from_index: int, to_index: int
-) -> dict:
-    """
-    Get transaction receipt logs with index range from ethereum node's JSON-RPC API
-
-    Args:
-        tx_hash (str): transaction hash
-        from_index (int): starting index
-        to_index (int): ending index
-
-    Returns:
-        str: transaction receipt logs in JSON format string
-    """
-    return json.loads(
-        Web3.to_json(
-            w3.eth.get_transaction_receipt(tx_hash)["logs"][from_index:to_index]
-        )
-    )
 
 
 # 交易追踪信息
@@ -306,15 +268,17 @@ def get_contract_events_within_block_number_range_from_jsonrpc(
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)
 
-    return json.loads(Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "address": contract_address,
-            }
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "address": contract_address,
+                }
+            )
         )
-    ))
+    )
 
 
 class AddressType:
@@ -334,40 +298,44 @@ def get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)
 
-    return json.loads(Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "address": contract_address,
-                "topics": [
-                    w3.keccak(text="Transfer(address,address,uint256)"),
-                    None,
-                    None,
-                ],
-            }
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "address": contract_address,
+                    "topics": [
+                        w3.keccak(text="Transfer(address,address,uint256)"),
+                        None,
+                        None,
+                    ],
+                }
+            )
         )
-    ))
+    )
 
 
 def get_contract_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)
-    return json.loads(Web3.to_json(
-        w3.eth.get_logs(
-            {
-                "fromBlock": from_block_number,
-                "toBlock": to_block_number,
-                "address": contract_address,
-                "topics": [
-                    w3.keccak(text="Transfer(address,address,uint256)"),
-                    None,
-                    None,
-                ],
-            }
+    return json.loads(
+        Web3.to_json(
+            w3.eth.get_logs(
+                {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block_number,
+                    "address": contract_address,
+                    "topics": [
+                        w3.keccak(text="Transfer(address,address,uint256)"),
+                        None,
+                        None,
+                    ],
+                }
+            )
         )
-    ))
+    )
 
 
 def get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
@@ -375,21 +343,23 @@ def get_contract_ERC1155_NFT_single_transfers_within_block_number_range_from_jso
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)
 
-    return json.loads(w3.eth.get_logs(
-        {
-            "fromBlock": from_block_number,
-            "toBlock": to_block_number,
-            "address": contract_address,
-            "topics": [
-                w3.keccak(
-                    text="TransferSingle(address,address,address,uint256,uint256)"
-                ),
-                None,
-                None,
-                None,
-            ],
-        }
-    ))
+    return json.loads(
+        w3.eth.get_logs(
+            {
+                "fromBlock": from_block_number,
+                "toBlock": to_block_number,
+                "address": contract_address,
+                "topics": [
+                    w3.keccak(
+                        text="TransferSingle(address,address,address,uint256,uint256)"
+                    ),
+                    None,
+                    None,
+                    None,
+                ],
+            }
+        )
+    )
 
 
 def get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
@@ -397,21 +367,23 @@ def get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_json
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)
 
-    return json.loads(w3.eth.get_logs(
-        {
-            "fromBlock": from_block_number,
-            "toBlock": to_block_number,
-            "address": contract_address,
-            "topics": [
-                w3.keccak(
-                    text="TransferBatch(address,address,address,uint256[],uint256[])"
-                ),
-                None,
-                None,
-                None,
-            ],
-        }
-    ))
+    return json.loads(
+        w3.eth.get_logs(
+            {
+                "fromBlock": from_block_number,
+                "toBlock": to_block_number,
+                "address": contract_address,
+                "topics": [
+                    w3.keccak(
+                        text="TransferBatch(address,address,address,uint256[],uint256[])"
+                    ),
+                    None,
+                    None,
+                    None,
+                ],
+            }
+        )
+    )
 
 
 class ContractBasicProperties(TypedDict):
@@ -423,46 +395,55 @@ class ContractBasicProperties(TypedDict):
     may_self_destructed: bool
 
 
-def get_contract_basic_info_from_jsonrpc(
-    contract_address: str,
-) -> ContractBasicProperties:
+def get_contract_call_at_block_number_from_jsonrpc(
+    contract_address: str, data: str, block_number: int
+) -> str:
     contract_address = Web3.to_checksum_address(contract_address)
-
-    return ContractBasicProperties(
-        name=_try_w3_call_fetch_str(
-            {
-                "to": contract_address,
-                "data": w3.keccak(text="name()").hex()[:10],
-            }
-        )
-        or "Not available",
-        symbol=_try_w3_call_fetch_str(
-            {
-                "to": contract_address,
-                "data": w3.keccak(text="symbol()").hex()[:10],
-            }
-        )
-        or "Not available",
-        total_supply=_try_w3_call_fetch_int(
-            {
-                "to": contract_address,
-                "data": w3.keccak(text="totalSupply()").hex()[:10],
-            }
-        )
-        or "Not available",
-        decimals=_try_w3_call_fetch_int(
-            {
-                "to": contract_address,
-                "data": w3.keccak(text="decimals()").hex()[:10],
-            }
-        )
-        or "Not available",
-        owner=_try_w3_call_fetch_address(
-            {
-                "to": contract_address,
-                "data": w3.keccak(text="owner()").hex()[:10],
-            }
-        )
-        or "Not available",
-        may_self_destructed=w3.eth.get_code(contract_address) == b"",
+    return json.loads(
+        Web3.to_json(w3.eth.call({"to": contract_address, "data": data}, block_number))
     )
+
+
+# def get_contract_basic_info_from_jsonrpc(
+#     contract_address: str,
+# ) -> ContractBasicProperties:
+#     contract_address = Web3.to_checksum_address(contract_address)
+
+#     return ContractBasicProperties(
+#         name=_try_w3_call_fetch_str(
+#             {
+#                 "to": contract_address,
+#                 "data": w3.keccak(text="name()").hex()[:10],
+#             }
+#         )
+#         or "Not available",
+#         symbol=_try_w3_call_fetch_str(
+#             {
+#                 "to": contract_address,
+#                 "data": w3.keccak(text="symbol()").hex()[:10],
+#             }
+#         )
+#         or "Not available",
+#         total_supply=_try_w3_call_fetch_int(
+#             {
+#                 "to": contract_address,
+#                 "data": w3.keccak(text="totalSupply()").hex()[:10],
+#             }
+#         )
+#         or "Not available",
+#         decimals=_try_w3_call_fetch_int(
+#             {
+#                 "to": contract_address,
+#                 "data": w3.keccak(text="decimals()").hex()[:10],
+#             }
+#         )
+#         or "Not available",
+#         owner=_try_w3_call_fetch_address(
+#             {
+#                 "to": contract_address,
+#                 "data": w3.keccak(text="owner()").hex()[:10],
+#             }
+#         )
+#         or "Not available",
+#         may_self_destructed=w3.eth.get_code(contract_address) == b"",
+#     )

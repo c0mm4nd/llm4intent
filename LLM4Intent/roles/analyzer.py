@@ -17,29 +17,30 @@ class Analyzer:
         self.log = get_logger("Analyzer")
 
     def analyze(self) -> str:
-        tool_call_docs = self.state.get_data_analyzing()
-        all_content = "\n\n".join([doc["content"] for doc in tool_call_docs])
-        human_message = f"Please analyze against the data:\n\n{all_content} \n\n"
-        system_message = self.system_message.format(
-            hierarchical_intents=json.dumps(self.state.hierarchical_intents),
-            data_analyzing=json.dumps(self.state.get_data_analyzing_tools()),
-            data_analyzed=json.dumps(list(self.state.data_analyzed.keys())),
-            memory_graph_encoding=self.state.memory_graph.get_encoding(),
-            external_info=self.state.external_info,
-        )
+        system_message = self.system_message.format()
         messages = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": human_message},
+            *self.state.chat_history,
+            {
+                "role": "user",
+                "content": f"""
+Please analyze against the retrieved data.""",
+            },
         ]
-        self.log.info("analyzer messages: %s", messages)
-        response = (
-            self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0.7
-            )
-            .choices[0]
-            .message.content
+        self.log.debug("analyzer messages: %s", messages)
+        completion = self.client.chat.completions.create(
+            model=self.model, messages=messages, temperature=0.7
         )
-        self.log.info("analyzer response: %s", response)
+        self.log.debug("analyzer completion: %s", completion)
+        response = completion.choices[0].message.content
+
+        # Save the analysis to the state
+        self.state.chat_history.extend(
+            [
+                {"role": "user", "content": f"Please analyze against the retrieved data."},
+                {"role": "assistant", "content": response},
+            ]
+        )
 
         self.state.last_speaker = self.name
         self.state.current_round += 1
@@ -48,5 +49,5 @@ class Analyzer:
 
         self.state.last_analysis = response
         self.state.last_analysis_checked = False
- 
+
         return response

@@ -32,15 +32,17 @@ class Scorer:
         self.log = get_logger("Scorer")
 
     def score(self) -> ScoreReport:
-        human_message = f"Please score the intent: {self.state.last_analysis}"
+        human_message = f"Please score the intent against the categories {self.state.options}"
         system_message = self.system_message.format(
             categories=json.dumps(self.state.options),
             score_report_schema=ScoreReport.model_json_schema(),
         )
         messages = [
             {"role": "system", "content": system_message},
+            *self.state.chat_history,
             {"role": "user", "content": human_message},
         ]
+        self.log.debug(messages)
         response = (
             self.client.chat.completions.create(
                 model=self.model, messages=messages, temperature=0
@@ -48,6 +50,7 @@ class Scorer:
             .choices[0]
             .message.content
         )
+        self.log.debug(response)
         report_data = json.loads(response.strip("```json\n").strip("\n```"))
         report = ScoreReport(**report_data)
         self.state.last_speaker = self.name

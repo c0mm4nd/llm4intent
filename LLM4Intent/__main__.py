@@ -36,22 +36,22 @@ def workflow(transaction_hash: str, hierarchical_intents: Mapping, options: List
     )
 
     retriever = Retriever(
-        model=DEFAULT_MODEL_NAME,
+        model="grok-2-latest",
         state=state,
         client=client,
     )
     analyzer = Analyzer(
-        model="deepseek/deepseek-chat",
+        model="grok-2-latest",
         state=state,
         client=client,
     )
     checker = Checker(
-        model=DEFAULT_MODEL_NAME,
+        model="grok-2-latest",
         state=state,
         client=client,
     )
     scorer = Scorer(
-        model=DEFAULT_MODEL_NAME,
+        model="grok-2-latest",
         state=state,
         client=client,
     )

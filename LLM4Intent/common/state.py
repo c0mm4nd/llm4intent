@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, Optional
 
 from pydantic import BaseModel, Field
 from web3 import Web3
@@ -16,14 +16,13 @@ from LLM4Intent.tools.jsonrpc import (
     get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc,
     get_address_eth_balance_at_block_number_from_json,
     get_address_transactions_within_block_number_range_from_jsonrpc,
-    get_contract_basic_info_from_jsonrpc,
+    get_contract_call_at_block_number_from_jsonrpc,
+    # get_contract_basic_info_from_jsonrpc,
     get_contract_code_at_block_number_from_jsonrpc,
     get_contract_storage_at_block_number_from_jsonrpc,
     get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc,
     get_transaction_from_jsonrpc,
-    get_transaction_receipt_logs_length_from_jsonrpc,
-    get_transaction_receipt_logs_with_index_range_from_jsonrpc,
-    get_transaction_receipt_without_logs_from_jsonrpc,
+    get_transaction_receipt_from_jsonrpc,
     get_transaction_trace_length_from_jsonrpc,
     get_transaction_trace_with_index_range_from_jsonrpc,
     get_address_type_from_jsonrpc,
@@ -78,21 +77,37 @@ class State:
         self.task = task
         self.options = options
 
-        self.hierarchical_intents = hierarchical_intents
-
         # variable state
         self.last_speaker = "human"
-        self.data_analyzing = []  # List[Dict]: {"content": str, "metadata": Dict}
-        self.data_checking = []  # List[Dict]
-        self.data_analyzed = {}  # Dict[str, Dict]
-        self.current_check_report = None  # CheckReport
+
+        self.chat_history = [
+            {
+                "role": "user",
+                "content": f"Please analyze the real intent behind the transaction with hash {self.task}",
+            },
+            {
+                "role": "assistant",
+                "content": f"Based on my knowledge, the intent is likely to fall into one of the following categories: {json.dumps(hierarchical_intents)}, I will proceed with the analysis by leveraging the appropriate tools.",
+            },
+        ]
+
         self.current_round = 0
+
+        self.data_missing: List[DataMissing] = [
+            DataMissing(
+                tool_name="get_transaction_from_jsonrpc",
+                tool_args={"transaction_hash": self.task},
+            ),
+            DataMissing(
+                tool_name="get_transaction_receipt_from_jsonrpc",
+                tool_args={"transaction_hash": self.task},
+            ),
+        ]
+
         self.last_analysis = None
         self.last_analysis_checked = False
 
         self.memory_graph = MemoryGraph()
-
-        self.external_info = []
 
         # as input args for an openai call
         self.openai_tools = [
@@ -100,16 +115,16 @@ class State:
             for tool in [
                 # JSON-RPC tools
                 self.get_transaction_from_jsonrpc,
-                self.get_transaction_receipt_logs_length_from_jsonrpc,
-                self.get_transaction_receipt_logs_with_index_range_from_jsonrpc,
+                self.get_transaction_receipt_from_jsonrpc,
                 # self.get_transaction_trace_length_from_jsonrpc,
                 # self.get_transaction_trace_with_index_range_from_jsonrpc,
-                self.get_address_ERC20_token_balance_at_block_number_from_jsonrpc,
+                self.get_address_token_balance_at_block_number_from_jsonrpc,
                 self.get_address_eth_balance_at_block_number_from_jsonrpc,
                 self.get_address_token_transfers_within_block_number_range,
                 self.get_address_transactions_within_block_number_range_from_jsonrpc,
                 self.get_address_type_from_jsonrpc,
-                self.get_contract_basic_info_from_jsonrpc,
+                # self.get_contract_basic_info_from_jsonrpc,
+                self.get_contract_call_at_block_number_from_jsonrpc,
                 self.get_contract_storage_at_block_number_from_jsonrpc,
                 self.get_contract_code_at_block_number_from_jsonrpc,
                 # Etherscan
@@ -125,32 +140,17 @@ class State:
             ]
         ]
 
-    def get_data_analyzing(self) -> List[Dict]:
-        docs = self.data_analyzing.copy()
-        self.data_analyzing.clear()
-        self.data_checking.extend(docs)
-        for doc in docs:
-            if doc["metadata"].get("tool_error"):
-                continue
-            key = f"{doc['metadata']['tool_name']}({json.dumps(doc['metadata']['tool_args']).removeprefix('{').removesuffix('}')})"
-            self.data_analyzed[key] = doc
-        return docs
-
-    def get_data_checking(self) -> List[Dict]:
-        docs = self.data_checking.copy()
-        self.data_checking.clear()
-        for doc in docs:
-            if doc["metadata"].get("tool_error"):
-                continue
-            key = f"{doc['metadata']['tool_name']}({json.dumps(doc['metadata']['tool_args']).removeprefix('{').removesuffix('}')})"
-            self.data_analyzed[key] = doc
-        return docs
-
-    def get_data_analyzing_tools(self) -> List[str]:
-        return [
-            f"{doc['metadata']['tool_name']}({json.dumps(doc['metadata']['tool_args']).removeprefix('{').removesuffix('}')})"
-            for doc in self.data_analyzing
-        ]
+    def has_tool_called(self, tool_name, tool_args) -> bool:
+        """Check if a tool has been called with specific arguments"""
+        return any(
+            any(
+                tool_call.get("function", {}).get("name") == tool_name
+                and json.loads(tool_call.get("function", {}).get("arguments", "{}"))
+                == tool_args
+                for tool_call in msg.get("tool_calls", [])
+            )
+            for msg in self.chat_history
+        )
 
     ### tool mapping, with counting in state
 
@@ -161,69 +161,26 @@ class State:
             transaction_hash: The hash of the transaction to retrieve
 
         Returns:
-            Dict: Transaction information
+            dict: Transaction information
         """
         tx = get_transaction_from_jsonrpc(transaction_hash)
         self.memory_graph.add_transaction(tx)
 
         return tx
 
-    def get_transaction_receipt_without_logs_from_jsonrpc(
+    def get_transaction_receipt_from_jsonrpc(
         self,
         transaction_hash: str,
     ) -> Dict:
-        """Retrieves transaction receipt information **without** event logs from a JSON-RPC endpoint
+        """Retrieves transaction receipt information (with event logs) from a JSON-RPC endpoint
 
         Args:
             transaction_hash: The hash of the transaction to retrieve receipt for
 
         Returns:
-            Dict: Transaction receipt information
+            dict: Transaction receipt information
         """
-        return get_transaction_receipt_without_logs_from_jsonrpc(transaction_hash)
-
-    def get_transaction_receipt_logs_length_from_jsonrpc(
-        self, transaction_hash: str
-    ) -> int:
-        """Retrieves transaction receipt logs length from a JSON-RPC endpoint
-
-        Args:
-            transaction_hash: The hash of the transaction to retrieve logs length for
-
-        Returns:
-            int: Transaction receipt logs length
-        """
-        return get_transaction_receipt_logs_length_from_jsonrpc(transaction_hash)
-
-    def get_transaction_receipt_logs_with_index_range_from_jsonrpc(
-        self, transaction_hash: str, from_index: int, to_index: int
-    ) -> Dict:
-        """Retrieves transaction receipt logs within an index range from a JSON-RPC endpoint
-
-        Args:
-            transaction_hash: The hash of the transaction to retrieve logs for
-            from_index: Starting index
-            to_index: Ending index, at most 50 logs can be retrieved at once, i.e. to_index <= from_index + 50
-
-        Returns:
-            Dict: Transaction receipt logs
-        """
-        if to_index > from_index + 50:
-            raise ValueError("to_index must not exceed from_index + 50")
-
-        # if log is Transfer event, add to graph
-        logs = get_transaction_receipt_logs_with_index_range_from_jsonrpc(
-            transaction_hash, from_index, to_index
-        )
-        for log in logs:
-            if (
-                log["topics"][0]
-                == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-            ):
-                decoded_transfer = ERC20_DECODER.decode_event_log("Transfer", log)
-                self.memory_graph.add_transfer(decoded_transfer)
-
-        return logs
+        return get_transaction_receipt_from_jsonrpc(transaction_hash)
 
     # def get_transaction_trace_length_from_jsonrpc(self, transaction_hash: str) -> int:
     #     """Retrieves transaction trace length from a JSON-RPC endpoint
@@ -256,8 +213,16 @@ class State:
     #         transaction_hash, from_index, to_index
     #     )
 
-    def get_address_type_from_jsonrpc(self, address) -> str:
-        """ """
+    def get_address_type_from_jsonrpc(self, address: str) -> str:
+        """
+        Retrieves the type (EOA or CA) of an address from a JSON-RPC endpoint
+
+        Args:
+            address: The Ethereum address to retrieve type for
+
+        Returns:
+            str: The type of the address, either "EOA" or "CA"
+        """
 
         return get_address_type_from_jsonrpc(address)
 
@@ -271,7 +236,7 @@ class State:
             block_number: The block number to check balance at
 
         Returns:
-            str: ETH balance in wei
+            int: ETH balance in minimal units (e.g. wei)
         """
         return get_address_eth_balance_at_block_number_from_json(address, block_number)
 
@@ -309,7 +274,7 @@ class State:
             address, from_block, to_block
         )
 
-    def get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
+    def get_address_token_balance_at_block_number_from_jsonrpc(
         self, token_address: str, address: str, block_number: int
     ) -> str:
         """Retrieves ERC20 token balance for an address at a specific block number
@@ -320,34 +285,51 @@ class State:
             block_number: The block number to check balance at
 
         Returns:
-            str: Token balance
+            int: Token balance in minimal units (e.g. wei for ETH)
         """
         return get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
             token_address, address, block_number
         )
 
-    def get_contract_basic_info_from_jsonrpc(self, contract_address: str) -> Dict:
-        """Retrieves basic information about a smart contract
+    # def get_contract_basic_info_from_jsonrpc(self, contract_address: str) -> Dict:
+    #     """Retrieves basic information about a smart contract
+
+    #     Args:
+    #         contract_address: The address of the smart contract
+
+    #     Returns:
+    #         Dict: Contract information
+    #     """
+    #     print(f"Calling get_contract_basic_info_from_jsonrpc with input:")
+    #     print(f"contract_address: {contract_address}")
+
+    #     try:
+    #         result = get_contract_basic_info_from_jsonrpc(contract_address)
+    #         print(f"Result: {result}")
+    #         # if result.get("name") == "Not available":
+    #         #     raise ValueError("Contract does not support ERC20 standard")
+    #         return result
+    #     except Exception as e:
+    #         error_result = {"error": str(e)}
+    #         print(f"Error occurred: {error_result}")
+    #         return error_result
+
+    def get_contract_call_at_block_number_from_jsonrpc(
+        self, contract_address: str, data: str, block_number: int
+    ) -> str:
+        """Retrieves contract call data at a specific block number
 
         Args:
             contract_address: The address of the smart contract
+            data: The data to send with the contract call
+            block_number: The block number to get calls at
 
         Returns:
-            Dict: Contract information
+            str: Contract call data
         """
-        print(f"Calling get_contract_basic_info_from_jsonrpc with input:")
-        print(f"contract_address: {contract_address}")
-
-        try:
-            result = get_contract_basic_info_from_jsonrpc(contract_address)
-            print(f"Result: {result}")
-            # if result.get("name") == "Not available":
-            #     raise ValueError("Contract does not support ERC20 standard")
-            return result
-        except Exception as e:
-            error_result = {"error": str(e)}
-            print(f"Error occurred: {error_result}")
-            return error_result
+        return get_contract_call_at_block_number_from_jsonrpc(
+            contract_address, data, block_number
+        )
 
     def get_contract_code_at_block_number_from_jsonrpc(
         self, contract_address: str, block_number: int
@@ -449,12 +431,19 @@ class State:
             hex_signature: The hex signature of the function to look up
 
         Returns:
-            str: The text signature of the function if found, None otherwise
+            dict: The possible text signature of the function if found
         """
         return get_function_signatures_from_signature_database(hex_signature)
 
     def get_contract_ABI_from_whatsabi(self, contract_address: str) -> dict:
+        """Retrieves contract ABI from WhatsABI
 
+        Args:
+            contract_address: The Ethereum contract address to get ABI for
+
+        Returns:
+            dict: Contract ABI in JSON format
+        """
         return get_contract_ABI_from_whatsabi(contract_address)
 
     def get_event_signatures_from_signature_database(self, hex_signature: str) -> str:
@@ -464,7 +453,7 @@ class State:
             hex_signature: The hex signature of the event to look up
 
         Returns:
-            str: The text signature of the event if found, None otherwise
+            dict: The possible text signature of the event if found
         """
         return get_event_signatures_from_signature_database(hex_signature)
 
@@ -475,33 +464,22 @@ class State:
             query: The query string to search for
 
         Returns:
-            List[str]: List of webpage
+            dict: The search result
         """
         result = search_webpage_from_google(query)
-        self.external_info.append({
-            "action": "search_webpage_from_google",
-            "query": query,
-            "result": result
-        })
 
         return result
 
-    def extract_webpage_info_by_urls(self, urls: list[str]):
+    def extract_webpage_info_by_urls(self, urls: List[str]):
         """retrieves webpage information by urls
 
         Args:
             urls: List of urls to extract information from
 
         Returns:
-            List[dict]: List of extracted webpage information
+            dict: The extracted information
         """
 
+        result = extract_webpage_info_by_urls(urls)
 
-        results = extract_webpage_info_by_urls(urls)
-        self.external_info.append({
-            "action": "extract_webpage_info_by_urls",
-            "urls": urls,
-            "results": results
-        })
-        
-        return results
+        return result

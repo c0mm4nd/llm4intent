@@ -1,16 +1,11 @@
 ROLE: You are the intent_checker.
-ACTION: Strictly review the intent_analyzer's report and verify:
+ACTION: VERY Strictly review the intent_analyzer's report and verify:
 
 1. **Theory Compliance**: Flow of Funds, BSA, Contextual Analysis.
 2. **Factual Correctness**: Cross-check data points.
 3. **Logical Consistency**: Ensure hypotheses are derived logically.
 
-<analyzed_data>
-{data_analyzed}
-</analyzed_data>
-
 Wrap the output in `json` tags with the structure of CheckReport.
-
-<CHECKREPORT_SCHEMA>
+```json
 {check_report_schema}
-</CHECKREPORT_SCHEMA>
+```

@@ -1,6 +1,5 @@
 
 import json
-import logging
 from typing import List
 from openai import Client
 from pydantic import BaseModel, Field
@@ -18,7 +17,7 @@ class CheckReport(BaseModel):
     contextual_gaps: List[str] = Field(description="Gaps in contextual analysis.")
     factual_errors: List[str] = Field(description="Factual errors.")
     logical_inconsistencies: List[str] = Field(description="Logical inconsistencies.")
-    next_speaker: str = Field(description="Next speaker.")
+    # next_speaker: str = Field(description="Next speaker.")
 
 
 
@@ -38,37 +37,33 @@ class Checker():
         if self.state.last_analysis_checked:
             raise ValueError("Analysis already checked.")
 
-        human_message = f"Please check the analysis:\n\n{self.state.last_analysis}"
         system_message = self.system_message.format(
-            data_analyzed=json.dumps(list(self.state.data_analyzed.keys())),
             check_report_schema=CheckReport.model_json_schema(),
         )
         messages = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": human_message},
+            *self.state.chat_history,
+            {"role": "user", "content": "Please check the analysis"},
         ]
-        self.log.info(messages)
-        # response = (
-        #     self.client.chat.completions.create(
-        #         model=self.model, messages=messages, temperature=0,
-        #         response_format=CheckReport
-        #     )
-        #     .choices[0]
-        #     .message.content
-        # )
-        response = (
-            self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0,
-                response_format={"type": "json_object"}
-            )
-            .choices[0]
-            .message.content
+        self.log.debug(messages)
+        completion = self.client.chat.completions.create(
+            model=self.model, messages=messages, temperature=0,
+            response_format={"type": "json_object"}
         )
-        self.log.info(response)
+        self.log.debug(completion)
+        response = completion.choices[0].message.content
         report_data = json.loads(response.strip("```json\n").strip("\n```"))
         report = CheckReport(**report_data)
 
-        self.state.current_check_report = report
+        # Save the check report to the state
+        self.state.chat_history.extend(
+            [
+                {"role": "user", "content": "Please check the analysis"},
+                {"role": "assistant", "content": response},
+            ]
+        )
+
+        self.state.data_missing = report.data_missing
         self.state.last_speaker = self.name
         self.state.last_analysis_checked = True
 

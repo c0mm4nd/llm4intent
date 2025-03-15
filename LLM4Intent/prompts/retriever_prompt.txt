@@ -5,8 +5,6 @@ Focus your retrieval on:
 1. Missing data points identified in the check report if any.
 2. Behavior sequence gaps that need data.
 3. Contextual gaps requiring additional information.
-4. Avoid retrieving data that has already been analyzed, as shown in DATA_ANALYZED.
+4. Avoid retrieving data that has already been analyzed.
 
 RETURN: Use tool_calls to provide tool calls. DO NOT return tool calls in content.
-
-DATA_ANALYZED: {data_analyzed}
