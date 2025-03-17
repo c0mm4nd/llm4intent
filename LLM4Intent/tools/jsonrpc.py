@@ -386,15 +386,6 @@ def get_contract_ERC1155_NFT_batch_transfers_within_block_number_range_from_json
     )
 
 
-class ContractBasicProperties(TypedDict):
-    name: str
-    symbol: str
-    total_supply: int
-    decimals: int
-    owner: str
-    may_self_destructed: bool
-
-
 def get_contract_call_at_block_number_from_jsonrpc(
     contract_address: str, data: str, block_number: int
 ) -> str:
@@ -404,46 +395,119 @@ def get_contract_call_at_block_number_from_jsonrpc(
     )
 
 
-# def get_contract_basic_info_from_jsonrpc(
-#     contract_address: str,
-# ) -> ContractBasicProperties:
-#     contract_address = Web3.to_checksum_address(contract_address)
+class ContractBasicProperties(TypedDict):
+    name: str
+    symbol: str
+    total_supply: int
+    decimals: int
+    owner: str
+    is_proxy: Optional[str]
+    may_self_destructed: bool
 
-#     return ContractBasicProperties(
-#         name=_try_w3_call_fetch_str(
-#             {
-#                 "to": contract_address,
-#                 "data": w3.keccak(text="name()").hex()[:10],
-#             }
-#         )
-#         or "Not available",
-#         symbol=_try_w3_call_fetch_str(
-#             {
-#                 "to": contract_address,
-#                 "data": w3.keccak(text="symbol()").hex()[:10],
-#             }
-#         )
-#         or "Not available",
-#         total_supply=_try_w3_call_fetch_int(
-#             {
-#                 "to": contract_address,
-#                 "data": w3.keccak(text="totalSupply()").hex()[:10],
-#             }
-#         )
-#         or "Not available",
-#         decimals=_try_w3_call_fetch_int(
-#             {
-#                 "to": contract_address,
-#                 "data": w3.keccak(text="decimals()").hex()[:10],
-#             }
-#         )
-#         or "Not available",
-#         owner=_try_w3_call_fetch_address(
-#             {
-#                 "to": contract_address,
-#                 "data": w3.keccak(text="owner()").hex()[:10],
-#             }
-#         )
-#         or "Not available",
-#         may_self_destructed=w3.eth.get_code(contract_address) == b"",
-#     )
+
+def is_ERC1167_proxy(contract_address: str, block_number: int) -> Optional[str]:
+    """检查合约是否是 EIP-1167 Minimal Proxy"""
+
+    code = w3.eth.get_code(contract_address, block_number).hex()
+    code = code.removeprefix("0x")
+
+    # EIP-1167 固定结构的前缀和后缀
+    prefix = "363d3d373d3d3d363d73"
+    suffix = "5af43d82803e903d91602b57fd5bf3"
+
+    if code.startswith(prefix) and code.endswith(suffix):
+        return "0x" + code.removesuffix(suffix).removeprefix(prefix)
+    else:
+        return None
+
+
+def check_is_ERC1167_proxy(contract_address: str) -> Optional[str]:
+    """检查合约是否是 EIP-1967 Proxy"""
+
+    code = w3.eth.get_code(contract_address).hex()
+    code = code.removeprefix("0x")
+
+    # EIP-1967 固定结构的前缀和后缀
+    prefix = "363d3d373d3d3d363d73"
+    suffix = "5af43d82803e903d91602b57fd5bf3"
+
+    if code.startswith(prefix) and code.endswith(suffix):
+        return w3.to_checksum_address(
+            "0x" + code.removesuffix(suffix).removeprefix(prefix)
+        )
+    else:
+        return None
+
+
+IMPLEMENTATION_SLOT = Web3.keccak(text="eip1967.proxy.implementation") - 1
+
+
+def check_is_ERC1967_proxy(contract_address: str, block_number: int) -> Optional[str]:
+    """检查合约是否是 EIP-1967 Proxy"""
+
+    if not "f4" in w3.eth.get_code(contract_address, block_identifier=block_number):
+        return None
+
+    storage_value = w3.eth.get_storage_at(contract_address, IMPLEMENTATION_SLOT)
+
+    # 如果存储槽数据为空，说明不是 EIP-1967 Proxy
+    if int(storage_value.hex(), 16) == 0:
+        return None
+
+    # 取存储槽数据的最后 20 字节转换为地址格式
+    implementation_address = Web3.to_checksum_address(storage_value[-20:].hex())
+    return implementation_address
+
+
+def get_contract_basic_info_from_jsonrpc(
+    contract_address: str,
+) -> ContractBasicProperties:
+    contract_address = Web3.to_checksum_address(contract_address)
+
+    is_ERC1167_proxy = check_is_ERC1167_proxy(contract_address)
+    is_ERC1967_proxy = check_is_ERC1967_proxy(contract_address)
+
+    default_name = (
+        "Not available"
+        if not is_ERC1167_proxy
+        else "ERC1167Proxy" if not is_ERC1967_proxy else "ERC1967Proxy"
+    )
+
+    return ContractBasicProperties(
+        name=_try_w3_call_fetch_str(
+            {
+                "to": contract_address,
+                "data": w3.keccak(text="name()").hex()[:10],
+            }
+        )
+        or default_name,
+        symbol=_try_w3_call_fetch_str(
+            {
+                "to": contract_address,
+                "data": w3.keccak(text="symbol()").hex()[:10],
+            }
+        )
+        or "Not available",
+        total_supply=_try_w3_call_fetch_int(
+            {
+                "to": contract_address,
+                "data": w3.keccak(text="totalSupply()").hex()[:10],
+            }
+        )
+        or "Not available",
+        decimals=_try_w3_call_fetch_int(
+            {
+                "to": contract_address,
+                "data": w3.keccak(text="decimals()").hex()[:10],
+            }
+        )
+        or "Not available",
+        owner=_try_w3_call_fetch_address(
+            {
+                "to": contract_address,
+                "data": w3.keccak(text="owner()").hex()[:10],
+            }
+        )
+        or "Not available",
+        may_self_destructed=w3.eth.get_code(contract_address) == b"",
+    )
