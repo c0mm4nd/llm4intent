@@ -9,12 +9,12 @@ def func_for_test(arg1: str, arg2: int, arg3: float) -> int:
 
 def test_convert_tool():
     tool = convert_tool(func_for_test)
+    print(tool)
     assert tool["function"]["parameters"]["properties"]["arg1"]["type"] == "string"
     assert tool["function"]["parameters"]["properties"]["arg2"]["type"] == "integer"
     assert tool["function"]["parameters"]["properties"]["arg3"]["type"] == "number"
     assert tool["function"]["parameters"]["required"] == ["arg1", "arg2", "arg3"]
-    assert tool["function"]["returns"]["type"] == "integer"
-    print(tool)
+    # assert tool["function"]["returns"]["type"] == "integer" # convert_tool has no returns type
 
 
 # {

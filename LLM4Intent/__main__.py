@@ -4,12 +4,14 @@ import json
 from typing import Any, Dict, List, Mapping, Optional
 from dotenv import load_dotenv
 from openai import Client, OpenAI
-from LLM4Intent.common.state import State
+
 from LLM4Intent.common.utils import get_logger
-from LLM4Intent.roles.retriever import Retriever
-from LLM4Intent.roles.analyzer import Analyzer
-from LLM4Intent.roles.checker import Checker
-from LLM4Intent.roles.scorer import Scorer
+from LLM4Intent.roles.main_analyzer import MainAnalyzer
+from LLM4Intent.roles.stateless_checker import StatelessChecker
+from LLM4Intent.roles.sub_analyzer import SubAnalyzer
+from LLM4Intent.roles.stateless_scorer import StatelessScorer
+
+from LLM4Intent.tools.annotated import *
 
 # 加载环境变量
 load_dotenv()
@@ -27,49 +29,107 @@ TOKEN_LIMIT = 128000  # 根据模型调整
 # %%
 logger = get_logger("Workflow")
 
+
+def collect_fact(transaction_hash: str):
+    transaction = get_transaction_from_jsonrpc(transaction_hash)
+    receipt = get_transaction_receipt_from_jsonrpc(transaction_hash)
+    to_address = transaction["to"]
+    from_address = transaction["from"]
+    fact = {
+        **transaction,
+        **receipt,
+        "from_label": get_address_label(from_address),
+        "to_label": get_address_label(to_address),
+    }
+
+    return fact
+
+
 # %%
 def workflow(transaction_hash: str, hierarchical_intents: Mapping, options: List[str]):
-    state = State(
-        task=transaction_hash,
-        hierarchical_intents=hierarchical_intents,
-        options=options,
-    )
+    fake_chat_history = [
+        {
+            "role": "user",
+            "content": f"Please analyze the transaction {transaction_hash}.",
+        },
+        {
+            "role": "assistant",
+            "content": """
+Sure,
+To analyze the transaction, I would break down the analysis into several parts:
+1. analyze the contract definition and its functions, finding the intent behind each function
+2. analyze the context of the transaction, finding the intent behind the sender and receiver
+3. analyze the market situation, finding the intent behind the transaction"
+""",
+        },
+    ]
 
-    retriever = Retriever(
-        model="grok-2-latest",
-        state=state,
-        client=client,
-    )
-    analyzer = Analyzer(
-        model="grok-2-latest",
-        state=state,
-        client=client,
-    )
-    checker = Checker(
-        model="grok-2-latest",
-        state=state,
-        client=client,
-    )
-    scorer = Scorer(
-        model="grok-2-latest",
-        state=state,
-        client=client,
-    )
+    all_available_tools = [
+        get_transaction,
+        get_transaction_receipt,
+        get_transaction_trace,
+        get_address_label,
+        get_address_eth_balance_at_block_number,
+        get_address_token_balance_at_block_number,
+        get_address_token_transfers_within_block_number_range,
+        get_contract_code_at_block_number,
+        get_contract_storage_at_block_number,
+        get_contract_token_transfers_within_block_number_range,
+        get_contract_creation,
+        get_contract_ABI,
+        get_contract_basic_info,
+        get_contract_source_code,
+        get_contract_code_at_block_number,
+        get_function_signature,
+        get_event_signature,
+        search_webpages,
+        extract_webpage_info_by_urls,
+    ]
 
-    while True:
-        logger.info(f"Last speaker: {state.last_speaker}")
-        if state.last_speaker == "human":
-            retriever.retrieve()
-        elif state.last_speaker == "retriever":
-            analyzer.analyze()
-        elif state.last_speaker == "analyzer":
-            report = checker.check()
-            if report.approval or state.current_round > 20:
-                break
-        elif state.last_speaker == "checker":
-            retriever.retrieve()
+    defi_contract_analyzer = MainAnalyzer(
+        "grok-2-latest", client, aspect="DeFi Contract Analysis"
+    )
+    context_analyzer = MainAnalyzer(
+        "grok-2-latest", client, aspect="Transaction Contextual Information"
+    )
+    market_analyzer = MainAnalyzer("grok-2-latest", client, aspect="Market Analysis")
 
-    scorer.score()
+
+    transaction_fact = collect_fact(transaction_hash)
+
+    main_analyzer_reports = []
+
+    for analyzer in [defi_contract_analyzer, context_analyzer, market_analyzer]:
+        plan = analyzer.breakdown()
+        breakdown_chat_history = fake_chat_history.copy()
+        for breakdown_question in plan.items:
+            sub_analyzer = SubAnalyzer(
+                "grok-2-latest",
+                client,
+                facts=transaction_fact,
+                main_aspect=analyzer.aspect,
+                tools=all_available_tools,
+            )
+            result = sub_analyzer.analyze(breakdown_question)
+            print(result)
+            breakdown_chat_history.append(
+                {
+                    "role": "user",
+                    "content": breakdown_question,
+                },
+                {
+                    "role": "assistant",
+                    "content": result,
+                },
+            )
+        analyzed_intent = analyzer.analyze(breakdown_chat_history)
+        main_analyzer_reports.append(analyzed_intent)
+
+    checker = StatelessChecker("grok-2-latest", client)
+    final_report = checker.check_and_summarize(main_analyzer_reports)
+
+    scorer = StatelessScorer("grok-2-latest", client)
+    score = scorer.score(final_report, options)
 
 
 def start():

@@ -91,25 +91,36 @@ def get_transaction_receipt_from_jsonrpc(tx_hash: str) -> dict:
 
 
 # 交易追踪信息
-def get_transaction_trace_length_from_jsonrpc(tx_hash: str) -> dict:
-    return json.loads(Web3.to_json(len(w3.tracing.trace_transaction(tx_hash))))
+def get_transaction_trace_from_jsonrpc(tx_hash: str) -> dict:
+    """
+    Get transaction trace from ethereum node's JSON-RPC API
 
+    Args:
+        tx_hash (str): transaction hash
 
-def get_transaction_trace_with_index_range_from_jsonrpc(
-    tx_hash: str, from_index: int, to_index: int
-) -> dict:
-    return json.loads(
-        Web3.to_json(w3.tracing.trace_transaction(tx_hash)[from_index:to_index])
-    )
+    Returns:
+        dict: transaction trace
+    """
+    return json.loads(Web3.to_json(w3.tracing.trace_transaction(tx_hash)))
 
 
 ####################### ADDRESS INFO #######################
 
 
 # 查询 ETH 余额
-def get_address_eth_balance_at_block_number_from_json(
+def get_address_eth_balance_at_block_number_from_jsonrpc(
     address: str, block_number: int
 ) -> int:
+    """
+    Get the ETH balance of an address at a specific block number.
+    
+    Args:
+        address (str): The Ethereum address to query.
+        block_number (int): The block number to check the balance at.
+
+    Returns:
+        int: The ETH balance of the address at the specified block number.
+    """
     address = Web3.to_checksum_address(address)
     return json.loads(Web3.to_json(w3.eth.get_balance(address, block_number)))
 
@@ -118,6 +129,18 @@ def get_address_eth_balance_at_block_number_from_json(
 def get_address_transactions_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[TxData]:
+    """
+    Get all transactions of an address within a block number range.
+
+    Args:
+        address (str): The Ethereum address to query.
+        from_block_number (int): The starting block number.
+        to_block_number (int): The ending block number.
+    
+    Returns:
+        List[TxData]: A list of transactions of the address within the specified block
+            number range.
+    """
     address = Web3.to_checksum_address(address)
     txs = []
     for block_number in range(from_block_number, to_block_number + 1):
@@ -130,9 +153,20 @@ def get_address_transactions_within_block_number_range_from_jsonrpc(
 
 
 # 查询 ERC20 代币余额和转账历史
-def get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
+def get_address_token_balance_at_block_number_from_jsonrpc(
     address: str, contract_address: str, block_number: int
 ) -> int:
+    """
+    Get the ERC20 token balance of an address at a specific block number.
+
+    Args:
+        address (str): The Ethereum address to query.
+        contract_address (str): The ERC20 token contract address.
+        block_number (int): The block number to check the balance at.
+    
+    Returns:
+        int: The ERC20 token balance of the address at the specified block number.
+    """
     address = Web3.to_checksum_address(address)
     return json.loads(
         Web3.to_json(
@@ -149,9 +183,20 @@ def get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
     )
 
 
-def get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+def get_address_token_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[LogReceipt]:
+    """
+    Get all ERC20 token transfers of an address within a block number range.
+
+    Args:
+        address (str): The Ethereum address to query.
+        from_block_number (int): The starting block number.
+        to_block_number (int): The ending block number.
+        
+    Returns:
+        List[LogReceipt]: A list of ERC20 token transfer logs within the specified block number range.
+    """
     address = Web3.to_checksum_address(address)
 
     return json.loads(
@@ -175,6 +220,17 @@ def get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
 def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[LogReceipt]:
+    """
+    Get all ERC721 NFT transfers of an address within a block number range.
+
+    Args:
+        address (str): The Ethereum address to query.
+        from_block_number (int): The starting block number.
+        to_block_number (int): The ending block number.
+        
+    Returns:
+        List[LogReceipt]: A list of ERC721 token transfer logs within the specified block number range.
+    """
     address = Web3.to_checksum_address(address)
 
     return json.loads(
@@ -198,7 +254,18 @@ def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
 def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
-    address = Web3.to_checksum_address
+    """
+    Get all ERC1155 NFT single transfers of an address within a block number range.
+    
+    Args:
+        address (str): The Ethereum address to query.
+        from_block_number (int): The starting block number.
+        to_block_number (int): The ending block number.
+        
+    Returns:
+        List[FilterTrace]: A list of ERC1155 NFT single transfer logs within the specified block number range.
+    """
+    address = Web3.to_checksum_address(address)
     return json.loads(
         Web3.to_json(
             w3.eth.get_logs(
@@ -223,6 +290,17 @@ def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_json
 def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
+    """
+    Get all ERC1155 NFT batch transfers of an address within a block number range.
+
+    Args:
+        address (str): The Ethereum address to query.
+        from_block_number (int): The starting block number.
+        to_block_number (int): The ending block number.
+    
+    Returns:
+        List[FilterTrace]: A list of ERC1155 NFT batch transfer logs within the specified block number range.
+    """
     address = Web3.to_checksum_address(address)
     return Web3.to_json(
         w3.eth.get_logs(
@@ -249,6 +327,17 @@ def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonr
 def get_contract_code_at_block_number_from_jsonrpc(
     contract_address: str, block_number: int
 ) -> str:
+    """
+    Get the code of a contract at a specific block number.
+
+    Args:
+        contract_address (str): The contract address.
+        block_number (int): The block number to check the code at.
+
+    Returns:
+        str: The code of the contract at the specified block
+            number.    
+    """
     contract_address = Web3.to_checksum_address(contract_address)
     return w3.eth.get_code(contract_address, block_identifier=block_number).hex()
 
@@ -293,7 +382,7 @@ def get_address_type_from_jsonrpc(address: str) -> str:
 
 
 # 查询各类代币标准(ERC20/721/1155)的转账事件
-def get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+def get_contract_token_transfers_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
 ) -> list:
     contract_address = Web3.to_checksum_address(contract_address)

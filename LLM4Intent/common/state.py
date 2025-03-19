@@ -12,28 +12,26 @@ from LLM4Intent.tools.etherscan import (
     get_verified_contract_source_code_from_etherscan,
 )
 from LLM4Intent.tools.jsonrpc import (
-    get_address_ERC20_token_balance_at_block_number_from_jsonrpc,
-    get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc,
-    get_address_eth_balance_at_block_number_from_json,
+    get_address_token_balance_at_block_number_from_jsonrpc,
+    get_address_token_transfers_within_block_number_range_from_jsonrpc,
+    get_address_eth_balance_at_block_number_from_jsonrpc,
     get_address_transactions_within_block_number_range_from_jsonrpc,
     get_contract_call_at_block_number_from_jsonrpc,
     # get_contract_basic_info_from_jsonrpc,
     get_contract_code_at_block_number_from_jsonrpc,
     get_contract_storage_at_block_number_from_jsonrpc,
-    get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc,
+    get_contract_token_transfers_within_block_number_range_from_jsonrpc,
     get_transaction_from_jsonrpc,
     get_transaction_receipt_from_jsonrpc,
-    get_transaction_trace_length_from_jsonrpc,
-    get_transaction_trace_with_index_range_from_jsonrpc,
     get_address_type_from_jsonrpc,
 )
 
 from LLM4Intent.tools.web2 import (
-    extract_webpage_info_by_urls,
+    extract_webpage_info_by_urls_from_tavily,
     get_contract_ABI_from_whatsabi,
     get_event_signatures_from_signature_database,
     get_function_signatures_from_signature_database,
-    search_webpage_from_google,
+    search_webpages_from_tavily
 )
 from web3research.evm import ContractDecoder
 from web3research.evm.abi import ERC20_ABI
@@ -238,7 +236,7 @@ class State:
         Returns:
             int: ETH balance in minimal units (e.g. wei)
         """
-        return get_address_eth_balance_at_block_number_from_json(address, block_number)
+        return get_address_eth_balance_at_block_number_from_jsonrpc(address, block_number)
 
     def get_address_token_transfers_within_block_number_range(
         self, address: str, from_block: int, to_block: int
@@ -253,7 +251,7 @@ class State:
         Returns:
             List[Dict]: List of token transfer events
         """
-        return get_address_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+        return get_address_token_transfers_within_block_number_range_from_jsonrpc(
             address, from_block, to_block
         )
 
@@ -287,7 +285,7 @@ class State:
         Returns:
             int: Token balance in minimal units (e.g. wei for ETH)
         """
-        return get_address_ERC20_token_balance_at_block_number_from_jsonrpc(
+        return get_address_token_balance_at_block_number_from_jsonrpc(
             token_address, address, block_number
         )
 
@@ -378,7 +376,7 @@ class State:
             List[Dict]: List of token transfer events
         """
         return (
-            get_contract_ERC20_token_transfers_within_block_number_range_from_jsonrpc(
+            get_contract_token_transfers_within_block_number_range_from_jsonrpc(
                 contract_address, from_block, to_block
             )
         )
@@ -466,11 +464,11 @@ class State:
         Returns:
             dict: The search result
         """
-        result = search_webpage_from_google(query)
+        result = search_webpages_from_tavily(query)
 
         return result
 
-    def extract_webpage_info_by_urls(self, urls: List[str]):
+    def extract_webpage_info_by_urls(self, urls: List[str]) -> dict:
         """retrieves webpage information by urls
 
         Args:
@@ -480,6 +478,6 @@ class State:
             dict: The extracted information
         """
 
-        result = extract_webpage_info_by_urls(urls)
+        result = extract_webpage_info_by_urls_from_tavily(urls)
 
         return result
