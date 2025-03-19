@@ -94,14 +94,13 @@ To analyze the transaction, I would break down the analysis into several parts:
     )
     market_analyzer = MainAnalyzer("grok-2-latest", client, aspect="Market Analysis")
 
-
     transaction_fact = collect_fact(transaction_hash)
 
-    main_analyzer_reports = []
+    main_analyzer_reports = {}
 
     for analyzer in [defi_contract_analyzer, context_analyzer, market_analyzer]:
-        plan = analyzer.breakdown()
-        breakdown_chat_history = fake_chat_history.copy()
+        plan = analyzer.breakdown(transaction_hash)
+        chat_histories = []
         for breakdown_question in plan.items:
             sub_analyzer = SubAnalyzer(
                 "grok-2-latest",
@@ -110,26 +109,19 @@ To analyze the transaction, I would break down the analysis into several parts:
                 main_aspect=analyzer.aspect,
                 tools=all_available_tools,
             )
-            result = sub_analyzer.analyze(breakdown_question)
-            print(result)
-            breakdown_chat_history.append(
-                {
-                    "role": "user",
-                    "content": breakdown_question,
-                },
-                {
-                    "role": "assistant",
-                    "content": result,
-                },
-            )
-        analyzed_intent = analyzer.analyze(breakdown_chat_history)
-        main_analyzer_reports.append(analyzed_intent)
+
+            chat_histories = sub_analyzer.analyze(chat_histories, breakdown_question, item_prompt=breakdown_question)
+
+        analyzed_intent = analyzer.analyze(chat_histories)
+        main_analyzer_reports[analyzer.aspect] = analyzed_intent
 
     checker = StatelessChecker("grok-2-latest", client)
-    final_report = checker.check_and_summarize(main_analyzer_reports)
+    final_report = checker.check_and_summarize(hierarchical_intents, main_analyzer_reports)
 
-    scorer = StatelessScorer("grok-2-latest", client)
-    score = scorer.score(final_report, options)
+    print(final_report)
+
+    # scorer = StatelessScorer("grok-2-latest", client)
+    # score = scorer.score(final_report, options)
 
 
 def start():

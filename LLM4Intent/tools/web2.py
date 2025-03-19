@@ -26,13 +26,13 @@ def extract_webpage_info_by_urls_from_tavily(urls: List[str]) -> dict:
 
 
 def get_function_signatures_from_signature_database(hex_signature: str) -> dict:
-    response = requests.get("https://evmlookup.vercel.app/api/keccak256/any?query={query}".format(query=hex_signature))
+    response = requests.get("https://evmlookup.vercel.app/api/keccak256/function?query={query}".format(query=hex_signature))
     result = response.json()
 
     return result["data"]
 
 def get_event_signatures_from_signature_database(hex_signature: str) -> dict:
-    response = requests.get("https://evmlookup.vercel.app/api/keccak256/any?query={query}".format(query=hex_signature))
+    response = requests.get("https://evmlookup.vercel.app/api/keccak256/event?query={query}".format(query=hex_signature))
     result = response.json()
 
     return result["data"]

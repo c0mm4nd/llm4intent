@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+import requests
+
 
 from LLM4Intent.tools.etherscan import (
     get_verified_contract_abi_from_etherscan,
@@ -136,11 +138,12 @@ def get_address_token_balance_at_block_number(
     )
 
 
-def get_contract_basic_info(contract_address: str) -> Dict:
+def get_contract_basic_info(contract_address: str, block_number: int) -> Dict:
     """Retrieves basic information about a smart contract
 
     Args:
         contract_address: The address of the smart contract
+        block_number: The block number to get contract info at
 
     Returns:
         Dict: Contract information
@@ -149,7 +152,7 @@ def get_contract_basic_info(contract_address: str) -> Dict:
     print(f"contract_address: {contract_address}")
 
     try:
-        result = get_contract_basic_info_from_jsonrpc(contract_address)
+        result = get_contract_basic_info_from_jsonrpc(contract_address, block_number)
         print(f"Result: {result}")
         # if result.get("name") == "Not available":
         #     raise ValueError("Contract does not support ERC20 standard")
@@ -239,31 +242,66 @@ def get_contract_source_code(contract_address: str) -> dict:
 """-------------database-------------"""
 
 
-def get_function_signature(hex_signature: str) -> str:
+def get_function_signature(contract_address: str, hex_signature: str) -> str:
     """Retrieves function signature text from signature databases using a hex signature
     When the function signature is not found in the database, it returns None, and suggests to use the ABI data instead.
 
     Args:
+        contract_address: The Ethereum contract address to look up function signature for
         hex_signature: The hex signature of the function to look up
 
     Returns:
         str: The text signature of the function if found, None otherwise
     """
-    return get_function_signatures_from_signature_database(hex_signature)
+    sig = get_function_signatures_from_signature_database(hex_signature)
+    if sig:
+        return sig
+
+    abi = get_contract_ABI(contract_address)
+    if not abi:
+        return None
+    
+    response = requests.post("http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi})
+    response.raise_for_status()
+
+    signatures = response.json()
+    for signature in signatures:
+        if signature["hex"] == hex_signature:
+            return [signature]
+
+    print(f"FAILED to find function signature for {hex_signature} in contract {contract_address}")
+    return None
 
 
-def get_event_signature(hex_signature: str) -> str:
+def get_event_signature(contract_address: str, hex_signature: str) -> str:
     """Retrieves event signature text from signature databases using a hex signature
     When the function signature is not found in the database, it returns None, and suggests to use the ABI data instead.
     
     Args:
+        contract_address: The Ethereum contract address to get event signature for
         hex_signature: The hex signature of the event to look up
 
     Returns:
         str: The text signature of the event if found, None otherwise
     """
-    return get_event_signatures_from_signature_database(hex_signature)
+    sig = get_event_signatures_from_signature_database(hex_signature)
+    if sig:
+        return sig
 
+    abi = get_contract_ABI(contract_address)
+    if not abi:
+        return None
+    
+    response = requests.post("http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi})
+    response.raise_for_status()
+
+    signatures = response.json()
+    for signature in signatures:
+        if signature["hex"] == hex_signature:
+            return [signature]
+
+    print(f"FAILED to find function signature for {hex_signature} in contract {contract_address}")
+    return None
 
 def get_contract_ABI(contract_address: str) -> dict:
     """Retrieves contract ABI from signature databases
