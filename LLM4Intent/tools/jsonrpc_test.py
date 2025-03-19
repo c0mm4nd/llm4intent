@@ -198,3 +198,8 @@ def test_get_contract_ABI_from_whatsabi() -> str:
     abi_result = get_contract_ABI_from_whatsabi("0x47293Fe9dE5546A2D3Fc44F52a1C383075cDcd62")
     print(abi_result)
     check_jsonable(abi_result)
+
+def test_get_transaction_time_from_jsonrpc() -> str:
+    time = get_transaction_time_from_jsonrpc("0x43a2cb2a2a4fa683a67db6f828d2db99e1253a33a8eb1032915e50f71d85a9f0")
+    print(time)
+    check_jsonable(time)

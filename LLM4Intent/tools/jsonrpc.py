@@ -1,3 +1,4 @@
+from datetime import datetime
 import string
 from typing import Any, Dict, List, TypedDict, Optional
 import requests
@@ -592,4 +593,24 @@ def get_contract_basic_info_from_jsonrpc(
         )
         or "Not available",
         may_self_destructed=w3.eth.get_code(contract_address, block_number) == b"",
+    )
+
+def get_transaction_time_from_jsonrpc(transaction_hash: str) -> str:
+    """Retrieves the time of the transaction (in UTC) from the transaction data
+
+    Args:
+        transaction_hash: The hash of the transaction to retrieve time for
+
+    Returns:
+        str: The time of the transaction
+    """
+    tx = get_transaction_from_jsonrpc(transaction_hash)
+    block_number = tx["blockNumber"]
+    block = w3.eth.get_block(block_number)
+    timestamp = block["timestamp"]
+
+    print(timestamp)
+
+    return datetime.fromtimestamp(int(timestamp)).strftime(
+        "%Y-%m-%d %H:%M:%S"
     )

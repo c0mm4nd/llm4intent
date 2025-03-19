@@ -82,26 +82,54 @@ To analyze the transaction, I would break down the analysis into several parts:
         get_contract_code_at_block_number,
         get_function_signature,
         get_event_signature,
+        get_transaction_time,
         search_webpages,
         extract_webpage_info_by_urls,
     ]
 
     defi_contract_analyzer = MainAnalyzer(
-        "grok-2-latest", client, aspect="DeFi Contract Analysis"
+        "grok-2-latest", client, aspect="DeFi Contract Analysis", tips="""
+To analyze the contract, you must understand its functions and the events it emits.
+You can use the following tools to analyze the contract:
+- get_contract_basic_info: to get the basic information of the contract, if the contract is a proxy, try analyzing the implementation contract
+- get_contract_ABI: to get the contract's functions and events
+- get_function_signature: to get the signature of a specific function
+- get_event_signature: to decode the hex signature of a specific event in the logs
+- get_contract_source_code: to get the source code of the contract, if available
+- get_address_label: to get the label of the contract creator, token addresses etc.
+- get_contract_creation: to get the creator address of the contract, maybe it has a special meaning
+"""
     )
     context_analyzer = MainAnalyzer(
-        "grok-2-latest", client, aspect="Transaction Contextual Information"
+        "grok-2-latest", client, aspect="Transaction Contextual Information", tips="""
+To analyze the context, you must understand the sender, receiver, and the purpose of the transaction.
+You can use the following tools to analyze the context:
+- get_address_transactions_within_block_number_range: to get the transactions of an address within a block number range
+- get_address_token_balance_at_block_number: to get the token balance of an address at a specific block number
+- get_address_eth_balance_at_block_number: to get the ETH balance of an address at a specific block number
+- get_address_token_transfers_within_block_number_range: to get the token transfers of an address within a block number range
+- get_contract_token_transfers_within_block_number_range: to get the token transfers of a contract within a block number range
+"""
     )
-    market_analyzer = MainAnalyzer("grok-2-latest", client, aspect="Market Analysis")
+    market_analyzer = MainAnalyzer("grok-2-latest", client, aspect="Market Analysis", tips=""""
+To analyze the market situation, you must understand the market conditions and the impact on the transaction."
+You can use the following tools to analyze the market:
+- get_transaction_time: to get the time of the transaction
+- search_webpages: to search for relevant webpages related to the transaction, contract, or addresses
+- extract_webpage_info_by_urls: to extract information from the webpages found
+""")
 
     transaction_fact = collect_fact(transaction_hash)
 
     main_analyzer_reports = {}
 
+    
+
     for analyzer in [defi_contract_analyzer, context_analyzer, market_analyzer]:
         plan = analyzer.breakdown(transaction_hash)
+        assert len(plan.items) == len(plan.prompts), f"Plan items and prompts mismatch: {plan.items} vs {plan.prompts}"
         chat_histories = []
-        for breakdown_question in plan.items:
+        for breakdown_question, item_prompt in zip(plan.items, plan.prompts):
             sub_analyzer = SubAnalyzer(
                 "grok-2-latest",
                 client,
@@ -110,7 +138,7 @@ To analyze the transaction, I would break down the analysis into several parts:
                 tools=all_available_tools,
             )
 
-            chat_histories = sub_analyzer.analyze(chat_histories, breakdown_question, item_prompt=breakdown_question)
+            chat_histories = sub_analyzer.analyze(chat_histories, breakdown_question, prompt=item_prompt)
 
         analyzed_intent = analyzer.analyze(chat_histories)
         main_analyzer_reports[analyzer.aspect] = analyzed_intent

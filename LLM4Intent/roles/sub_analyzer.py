@@ -94,7 +94,7 @@ class SubAnalyzer:
             
         return tool_messages
 
-    def analyze(self, previous_chat_history, question: str) -> str:
+    def analyze(self, previous_chat_history, question: str, prompt: str) -> str:
         """
         Analyze a specific sub-question using tools and LLM capabilities
 
@@ -109,7 +109,7 @@ class SubAnalyzer:
             *previous_chat_history,
             {
                 "role": "user",
-                "content": f"Known Transaction Facts: {json.dumps(self.facts)}\n\nQuestion to analyze: {question}",
+                "content": f"Known Transaction Facts: {json.dumps(self.facts)}\n\nQuestion to analyze: {question}\n\n{prompt}",
             },
         ]
         max_iterations = 10  # Prevent infinite loops
@@ -173,5 +173,7 @@ class SubAnalyzer:
         self.log.warning(
             f"Reached maximum iterations ({max_iterations}) without completing analysis"
         )
+
+        self.log.warning(f"Final chat history: {chat_history}")
 
         return chat_history

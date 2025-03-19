@@ -1,5 +1,5 @@
 from typing import Dict, List
-
+from datetime import datetime
 import requests
 
 
@@ -20,6 +20,7 @@ from LLM4Intent.tools.jsonrpc import (
     get_contract_token_transfers_within_block_number_range_from_jsonrpc,
     get_transaction_from_jsonrpc,
     get_transaction_receipt_from_jsonrpc,
+    get_transaction_time_from_jsonrpc,
     get_transaction_trace_from_jsonrpc,
 )
 from LLM4Intent.tools.web2 import (
@@ -209,7 +210,9 @@ def get_contract_token_transfers_within_block_number_range(
     Returns:
         List[Dict]: List of token transfer events
     """
-    return get_contract_token_transfers_within_block_number_range_from_jsonrpc(contract_address, from_block, to_block)
+    return get_contract_token_transfers_within_block_number_range_from_jsonrpc(
+        contract_address, from_block, to_block
+    )
 
 
 """-------------etherscan-------------"""
@@ -260,8 +263,10 @@ def get_function_signature(contract_address: str, hex_signature: str) -> str:
     abi = get_contract_ABI(contract_address)
     if not abi:
         return None
-    
-    response = requests.post("http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi})
+
+    response = requests.post(
+        "http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi}
+    )
     response.raise_for_status()
 
     signatures = response.json()
@@ -269,14 +274,16 @@ def get_function_signature(contract_address: str, hex_signature: str) -> str:
         if signature["hex"] == hex_signature:
             return [signature]
 
-    print(f"FAILED to find function signature for {hex_signature} in contract {contract_address}")
+    print(
+        f"FAILED to find function signature for {hex_signature} in contract {contract_address}"
+    )
     return None
 
 
 def get_event_signature(contract_address: str, hex_signature: str) -> str:
     """Retrieves event signature text from signature databases using a hex signature
     When the function signature is not found in the database, it returns None, and suggests to use the ABI data instead.
-    
+
     Args:
         contract_address: The Ethereum contract address to get event signature for
         hex_signature: The hex signature of the event to look up
@@ -291,8 +298,10 @@ def get_event_signature(contract_address: str, hex_signature: str) -> str:
     abi = get_contract_ABI(contract_address)
     if not abi:
         return None
-    
-    response = requests.post("http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi})
+
+    response = requests.post(
+        "http://evmlookup.web3resear.ch/api/keccak256/submit", json={"abi": abi}
+    )
     response.raise_for_status()
 
     signatures = response.json()
@@ -300,8 +309,11 @@ def get_event_signature(contract_address: str, hex_signature: str) -> str:
         if signature["hex"] == hex_signature:
             return [signature]
 
-    print(f"FAILED to find function signature for {hex_signature} in contract {contract_address}")
+    print(
+        f"FAILED to find function signature for {hex_signature} in contract {contract_address}"
+    )
     return None
+
 
 def get_contract_ABI(contract_address: str) -> dict:
     """Retrieves contract ABI from signature databases
@@ -346,6 +358,7 @@ def extract_webpage_info_by_urls(urls: List[str]) -> dict:
     response = extract_webpage_info_by_urls_from_tavily(urls)
     return response
 
+
 def get_address_label(address: str) -> list[dict]:
     """Retrieves the label for an Ethereum address, return empty list if not found
     When the label is not found, suggest to use other methods to refer the label
@@ -357,3 +370,15 @@ def get_address_label(address: str) -> list[dict]:
         list[dict]: The labels for the address
     """
     return get_address_labels_from_github_repo(address)
+
+
+def get_transaction_time(transaction_hash: str) -> str:
+    """Retrieves the time of the transaction (in UTC) from the transaction data
+
+    Args:
+        transaction_hash: The hash of the transaction to retrieve time for
+
+    Returns:
+        str: The time of the transaction
+    """
+    return get_transaction_time_from_jsonrpc(transaction_hash)

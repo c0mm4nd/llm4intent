@@ -17,7 +17,10 @@ class Plan(BaseModel):
 BREAKDOWN_PROMPT = """
 To analyze the intent behind the Ethereum transaction {transaction_hash}, we have assembled the team with multiple analyzers.
 
-Based on known and unknown facts, please devise a short bullet-point plan for parallelly addressing the original request. 
+Based on known and unknown facts, please devise a short bullet-point plan for each analyzer to follow. The plan should include the target of the analysis and the TODO items with detailed prompts for better handling each item.
+
+Here are some TIPs to help you with the plan and prompts:
+{tips}
 
 Please output an answer in pure JSON format according to the following schema. The JSON object must be parsable as-is. DO NOT OUTPUT ANYTHING OTHER THAN JSON, AND DO NOT DEVIATE FROM THIS SCHEMA:
 {plan_json_schema}
@@ -25,11 +28,12 @@ Please output an answer in pure JSON format according to the following schema. T
 
 
 class MainAnalyzer:
-    def __init__(self, model: str, client: Client, aspect: str):
+    def __init__(self, model: str, client: Client, aspect: str, tips: str):
         self.name = "analyzer"
         self.model = model
         self.client = client
         self.aspect = aspect
+        self.tips = tips
 
         self.system_message = get_prompt("main_analyzer").format(aspect=self.aspect)
         self.log = get_logger("MainAnalyzer")
@@ -38,7 +42,9 @@ class MainAnalyzer:
 
     def breakdown(self, transaction_hash) -> Plan:
         breakdown_prompt = BREAKDOWN_PROMPT.format(
-            transaction_hash=transaction_hash, plan_json_schema=Plan.model_json_schema()
+            transaction_hash=transaction_hash,
+            tips=self.tips,
+            plan_json_schema=Plan.model_json_schema(),
         )
 
         messages = [
