@@ -7,7 +7,7 @@ from LLM4Intent.common.utils import get_logger, get_prompt
 
 
 class AnalysisWeight(BaseModel):
-    question: str = Field(description="The question being analyzed")
+    perspective: str = Field(description="The analyzing perspective")
     weight: float = Field(
         description="Credibility weight between 0.0 and 1.0", ge=0.0, le=1.0
     )
@@ -19,13 +19,16 @@ class CheckReport(BaseModel):
         description="List of analyses with their assigned credibility weights"
     )
     identified_intent: str = Field(
-        description="The most credible intent category from intent_cat.json"
+        description="The most credible intent category from hierarchy of intents"
     )
     intent_path: List[str] = Field(
-        description="The path to the identified intent in the intent_cat.json hierarchy"
+        description="The path to the identified intent in the hierarchy of intents"
     )
     confidence_score: float = Field(
         description="Overall confidence score between 0.0 and 1.0", ge=0.0, le=1.0
+    )
+    knowledge_missing: List[str] = Field(
+        description="List of knowledge missing from the analysis"
     )
     summary: str = Field(description="Summary of the intent analysis and justification")
 
@@ -42,7 +45,7 @@ class StatelessChecker:
             self.intent_categories = json.load(f)
 
     def check_and_summarize(
-        self, hierarchical_intents: dict, aspect_analyzer_reports: dict
+        self, hierarchical_intents: dict, perspective_analyzer_reports: dict
     ) -> CheckReport:
         chat_history = []
 
@@ -54,8 +57,8 @@ class StatelessChecker:
         )
 
         analysis = ""
-        for aspect, report in aspect_analyzer_reports.items():
-            analysis += f"Aspect: {aspect}\n{report}\n"
+        for perspective, report in perspective_analyzer_reports.items():
+            analysis += f"Perspective: {perspective}\n{report}\n"
 
         # Format the analyzer history and current analysis
         analysis_content = f"""

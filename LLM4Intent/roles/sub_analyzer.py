@@ -31,15 +31,15 @@ class SubAnalyzer:
         model: str,
         client: Client,
         facts: str,
-        main_aspect: str,
+        main_perspective: str,
         tools: List[Callable],
     ):
         self.model_name = model
         self.client = client
-        self.main_aspect = main_aspect
+        self.main_perspective = main_perspective
         self.tools = tools
         self.facts = facts
-        self.system_prompt = get_prompt("sub_analyzer").format(aspect=main_aspect)
+        self.system_prompt = get_prompt("sub_analyzer").format(perspective=main_perspective)
         self.log = get_logger("SubAnalyzer")
         self.tool_map = {tool.__name__: tool for tool in tools}
 

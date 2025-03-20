@@ -28,14 +28,14 @@ Please output an answer in pure JSON format according to the following schema. T
 
 
 class MainAnalyzer:
-    def __init__(self, model: str, client: Client, aspect: str, tips: str):
+    def __init__(self, model: str, client: Client, perspective: str, tips: str):
         self.name = "analyzer"
         self.model = model
         self.client = client
-        self.aspect = aspect
+        self.perspective = perspective
         self.tips = tips
 
-        self.system_message = get_prompt("main_analyzer").format(aspect=self.aspect)
+        self.system_message = get_prompt("main_analyzer").format(perspective=self.perspective)
         self.log = get_logger("MainAnalyzer")
 
         self.plan = None
@@ -66,7 +66,7 @@ class MainAnalyzer:
 
         return plan
 
-    def analyze(self, merged_chat_history) -> str:
+    def analyze(self, hierarchical_intents, merged_chat_history) -> str:
         chat_history = [
             {
                 "role": "user",
@@ -88,7 +88,11 @@ class MainAnalyzer:
                 *chat_history,
                 {
                     "role": "user",
-                    "content": f"""Please infer the intent behind the {self.plan.target} from the perspective of the {self.aspect}.""",
+                    "content": f"""Please infer the intent behind the {self.plan.target} from the perspective of the {self.perspective}.
+
+The intent inferred should be one of the following:
+{hierarchical_intents}
+                    """,
                 },
             ]
             self.log.debug("analyzer messages: %s", messages)

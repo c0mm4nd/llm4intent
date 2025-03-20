@@ -2,7 +2,7 @@
 import os
 import json
 import concurrent.futures
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 from dotenv import load_dotenv
 from openai import Client, OpenAI
 
@@ -92,7 +92,7 @@ To analyze the transaction, I would break down the analysis into several parts:
     defi_contract_analyzer = MainAnalyzer(
         "grok-2-latest",
         client,
-        aspect="DeFi Contract Analysis",
+        perspective="DeFi Contract Analysis",
         tips="""
 To analyze the contract, you must understand its functions and the events it emits.
 You can use the following tools to analyze the contract:
@@ -109,7 +109,7 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
     context_analyzer = MainAnalyzer(
         "grok-2-latest",
         client,
-        aspect="Transaction Contextual Information",
+        perspective="Transaction Contextual Information",
         tips="""
 To analyze the context, you must understand the sender, receiver, and the purpose of the transaction.
 You can use the following tools to analyze the context:
@@ -124,7 +124,7 @@ NEVER try decoding the transaction data or logs directly yourself, ALWAYS use th
     market_analyzer = MainAnalyzer(
         "grok-2-latest",
         client,
-        aspect="Market Analysis",
+        perspective="Market Analysis",
         tips=""""
 To analyze the market situation, you must understand the market conditions and the impact on the transaction."
 You can use the following tools to analyze the market:
@@ -139,7 +139,7 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
 
     main_analyzer_reports = {}
 
-    def run_analyzer(analyzer):
+    def run_analyzer(analyzer: MainAnalyzer) -> Tuple[str, str]:
         plan = analyzer.breakdown(transaction_hash)
         assert len(plan.items) == len(
             plan.prompts
@@ -151,7 +151,7 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
                 "grok-2-latest",
                 client,
                 facts=transaction_fact,
-                main_aspect=analyzer.aspect,
+                main_perspective=analyzer.perspective,
                 tools=all_available_tools,
             )
 
@@ -159,8 +159,8 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
                 chat_histories, breakdown_question, prompt=item_prompt
             )
 
-        analyzed_intent = analyzer.analyze(chat_histories)
-        return analyzer.aspect, analyzed_intent
+        analyzed_intent = analyzer.analyze(hierarchical_intents, chat_histories)
+        return analyzer.perspective, analyzed_intent
 
     analyzers = [defi_contract_analyzer, context_analyzer, market_analyzer]
     
@@ -168,8 +168,8 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {executor.submit(run_analyzer, analyzer): analyzer for analyzer in analyzers}
         for future in concurrent.futures.as_completed(futures):
-            aspect, analyzed_intent = future.result()
-            main_analyzer_reports[aspect] = analyzed_intent
+            perspective, analyzed_intent = future.result()
+            main_analyzer_reports[perspective] = analyzed_intent
 
     checker = StatelessChecker("grok-2-latest", client)
     final_report = checker.check_and_summarize(
