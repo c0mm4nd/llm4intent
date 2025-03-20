@@ -1,6 +1,7 @@
 # %%
 import os
 import json
+import concurrent.futures
 from typing import Any, Dict, List, Mapping, Optional
 from dotenv import load_dotenv
 from openai import Client, OpenAI
@@ -138,16 +139,12 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
 
     main_analyzer_reports = {}
 
-    for analyzer in [defi_contract_analyzer, context_analyzer, market_analyzer]:
+    def run_analyzer(analyzer):
         plan = analyzer.breakdown(transaction_hash)
         assert len(plan.items) == len(
             plan.prompts
         ), f"Plan items and prompts mismatch: {plan.items} vs {plan.prompts}"
-    for plan in [
-        defi_contract_analyzer.plan,
-        context_analyzer.plan,
-        market_analyzer.plan,
-    ]:
+        
         chat_histories = []
         for breakdown_question, item_prompt in zip(plan.items, plan.prompts):
             sub_analyzer = SubAnalyzer(
@@ -163,7 +160,16 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
             )
 
         analyzed_intent = analyzer.analyze(chat_histories)
-        main_analyzer_reports[analyzer.aspect] = analyzed_intent
+        return analyzer.aspect, analyzed_intent
+
+    analyzers = [defi_contract_analyzer, context_analyzer, market_analyzer]
+    
+    # Execute analyzers in parallel
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(run_analyzer, analyzer): analyzer for analyzer in analyzers}
+        for future in concurrent.futures.as_completed(futures):
+            aspect, analyzed_intent = future.result()
+            main_analyzer_reports[aspect] = analyzed_intent
 
     checker = StatelessChecker("grok-2-latest", client)
     final_report = checker.check_and_summarize(
