@@ -5,13 +5,13 @@ from openai import Client
 from pydantic import BaseModel, Field
 from LLM4Intent.common.utils import get_logger, get_prompt
 
+class TODOItem(BaseModel):
+    question: str = Field(..., description="The TODO item in the plan, in form of a question")
+    prompt: str = Field(..., description="The detailed prompt for better handling the question")
 
 class Plan(BaseModel):
     target: str = Field(..., description="The target of the plan")
-    items: list[str] = Field(..., description="The TODO items in the plan")
-    prompts: list[str] = Field(
-        ..., description="The detailed prompts for better handling each TODO item"
-    )
+    items: list[TODOItem] = Field(..., description="The TODO items in the plan")
 
 
 BREAKDOWN_PROMPT = """
@@ -27,7 +27,7 @@ Please output an answer in pure JSON format according to the following schema. T
 """
 
 
-class MainAnalyzer:
+class MetaControlAnalyzer:
     def __init__(self, model: str, client: Client, perspective: str, tips: str):
         self.name = "analyzer"
         self.model = model

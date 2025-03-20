@@ -281,6 +281,7 @@ def get_function_signature(contract_address: str, hex_signature: str) -> str:
 
     abi = get_contract_ABI(contract_address)
     if not abi:
+        print("No ABI found for contract address:", contract_address)
         return None
 
     response = requests.post(
@@ -316,6 +317,7 @@ def get_event_signature(contract_address: str, hex_signature: str) -> str:
 
     abi = get_contract_ABI(contract_address)
     if not abi:
+        print("No ABI found for contract address:", contract_address)
         return None
 
     response = requests.post(
@@ -344,10 +346,11 @@ def get_contract_ABI(contract_address: str) -> dict:
         dict: Contract ABI in JSON format
     """
 
-    abi_result = get_verified_contract_abi_from_etherscan(contract_address)
-    if not bool(abi_result["status"]):
-        abi_result = get_contract_ABI_from_whatsabi(contract_address)
-    return abi_result
+    abi = get_verified_contract_abi_from_etherscan(contract_address)
+    if not abi:
+        abi = get_contract_ABI_from_whatsabi(contract_address)
+        
+    return abi
 
 
 def search_webpages(query: str) -> dict:

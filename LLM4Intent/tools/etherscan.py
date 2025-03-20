@@ -42,7 +42,11 @@ def get_verified_contract_abi_from_etherscan(contract_address: str) -> dict:
         try:
             response = requests.get(url)
             response.raise_for_status()
-            return response.json()
+            result =  response.json()
+            if int(result["status"]):
+                return result["result"]
+            else:
+                return None
         except requests.exceptions.RequestException as e:
             print(e)
             time.sleep(10)

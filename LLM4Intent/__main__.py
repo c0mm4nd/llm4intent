@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 from openai import Client, OpenAI
 
 from LLM4Intent.common.utils import get_logger
-from LLM4Intent.roles.main_analyzer import MainAnalyzer
+from LLM4Intent.roles.main_analyzer import MetaControlAnalyzer
 from LLM4Intent.roles.stateless_checker import StatelessChecker
-from LLM4Intent.roles.sub_analyzer import SubAnalyzer
+from LLM4Intent.roles.sub_analyzer import DomainExpertAnalyzer
 from LLM4Intent.roles.stateless_scorer import StatelessScorer
 
 from LLM4Intent.tools.annotated import *
@@ -89,13 +89,13 @@ To analyze the transaction, I would break down the analysis into several parts:
         extract_webpage_info_by_urls,
     ]
 
-    defi_contract_analyzer = MainAnalyzer(
+    defi_contract_analyzer = MetaControlAnalyzer(
         "grok-2-latest",
         client,
         perspective="DeFi Contract Analysis",
         tips="""
 To analyze the contract, you must understand its functions and the events it emits.
-You can use the following tools to analyze the contract:
+You can use the following tools (not limited) to analyze the contract:
 - get_contract_basic_info: to get the basic information of the contract, if the contract is a proxy, try analyzing the implementation contract
 - get_contract_ABI: to get the contract's functions and events
 - get_function_signature: to get the signature of a specific function
@@ -106,31 +106,47 @@ You can use the following tools to analyze the contract:
 NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provided.
 """,
     )
-    context_analyzer = MainAnalyzer(
+    context_analyzer = MetaControlAnalyzer(
         "grok-2-latest",
         client,
         perspective="Transaction Contextual Information",
         tips="""
 To analyze the context, you must understand the sender, receiver, and the purpose of the transaction.
-You can use the following tools to analyze the context:
+You can use the following tools (not limited) to analyze the context:
 - get_address_transactions_within_block_number_range: to get the transactions of an address within a block number range
 - get_address_token_balance_at_block_number: to get the token balance of an address at a specific block number
 - get_address_eth_balance_at_block_number: to get the ETH balance of an address at a specific block number
 - get_address_token_transfers_within_block_number_range: to get the token transfers of an address within a block number range
-- get_contract_token_transfers_within_block_number_range: to get the token transfers of a contract within a block number range
+- get_token_transfers_within_block_number_range: to get the token transfers of a contract within a block number range
 NEVER try decoding the transaction data or logs directly yourself, ALWAYS use the tools provided.
 """,
     )
-    market_analyzer = MainAnalyzer(
+    market_analyzer = MetaControlAnalyzer(
         "grok-2-latest",
         client,
         perspective="Market Analysis",
         tips=""""
-To analyze the market situation, you must understand the market conditions and the impact on the transaction."
-You can use the following tools to analyze the market:
+To analyze the market situation, you must understand the market conditions and the impact on the transaction.
+You can use the following tools  (not limited) to analyze the market:
 - get_transaction_time: to get the time of the transaction
 - search_webpages: to search for relevant webpages related to the transaction, contract, or addresses
 - extract_webpage_info_by_urls: to extract information from the webpages found
+NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provided.
+""",
+    )
+    abnormality_analyzer = MetaControlAnalyzer(
+        "grok-2-latest",
+        client,
+        perspective="Abnormality Detection",
+        tips="""
+To detect abnormalities, you must understand the normal behavior and patterns in the transaction, trying to compare the transaction with the normal ones.
+You can use the following tools (not limited) to detect abnormalities:
+- get_transaction_trace: to get the trace of the transaction, checking whether it is an exploit
+- get_contract_storage_at_block_number: to get the contract storage at the transaction block number and the previous block number, checking for any changes
+- get_contract_code_at_block_number: to get the contract code at a specific block number, checking whether it's a specific contract for exploiting
+- get_address_transactions_within_block_number_range: to get the transactions of an address within a block number range, checking the money laundering pattern
+- get_address_token_transfers_within_block_number_range: to get the token transfers of an address within a block number range, checking the money laundering pattern
+- get_token_transfers_within_block_number_range: to get the ERC20 token transfers(swaps) within a block number range, checking whether it's a rugpull etc.
 NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provided.
 """,
     )
@@ -139,15 +155,13 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
 
     main_analyzer_reports = {}
 
-    def run_analyzer(analyzer: MainAnalyzer) -> Tuple[str, str]:
+    def run_analyzer(analyzer: MetaControlAnalyzer) -> Tuple[str, str]:
         plan = analyzer.breakdown(transaction_hash)
-        assert len(plan.items) == len(
-            plan.prompts
-        ), f"Plan items and prompts mismatch: {plan.items} vs {plan.prompts}"
-        
+
         chat_histories = []
-        for breakdown_question, item_prompt in zip(plan.items, plan.prompts):
-            sub_analyzer = SubAnalyzer(
+        for todo in plan.items:
+            breakdown_question, item_prompt = todo.question, todo.prompt
+            sub_analyzer = DomainExpertAnalyzer(
                 "grok-2-latest",
                 client,
                 facts=transaction_fact,
@@ -162,14 +176,30 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
         analyzed_intent = analyzer.analyze(hierarchical_intents, chat_histories)
         return analyzer.perspective, analyzed_intent
 
-    analyzers = [defi_contract_analyzer, context_analyzer, market_analyzer]
-    
+    analyzers = [
+        defi_contract_analyzer,
+        context_analyzer,
+        market_analyzer,
+        abnormality_analyzer,
+    ]
+
     # Execute analyzers in parallel
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {executor.submit(run_analyzer, analyzer): analyzer for analyzer in analyzers}
+        futures = {
+            executor.submit(run_analyzer, analyzer): analyzer for analyzer in analyzers
+        }
         for future in concurrent.futures.as_completed(futures):
             perspective, analyzed_intent = future.result()
             main_analyzer_reports[perspective] = analyzed_intent
+    # for analyzer in analyzers:
+    #     perspective, analyzed_intent = run_analyzer(analyzer)
+    #     main_analyzer_reports[perspective] = analyzed_intent
+
+    # Cross-validate findings between analyzers to detect inconsistencies
+    # cross_validation = {
+    #     "findings": main_analyzer_reports,
+    #     "transaction_fact": transaction_fact,
+    # }
 
     checker = StatelessChecker("grok-2-latest", client)
     final_report = checker.check_and_summarize(

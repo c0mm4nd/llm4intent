@@ -4,7 +4,6 @@ from web3research.evm import ContractDecoder, ERC20_ABI
 from web3 import Web3
 import os
 
-print(os.getenv("W3R_API_KEY"))
 w3r = Web3Research(api_token=os.getenv("W3R_API_KEY"))
 
 ERC20_DECODER = ContractDecoder(Web3(), contract_abi=ERC20_ABI)
@@ -23,16 +22,10 @@ def get_address_transactions_within_block_number_range_from_web3research(
         )
     )
 
-    clean_txs = []
-    for tx in txs:
-        clean_tx = tx.pop("logsBloom")
-        clean_tx = tx.pop("r")
-        clean_tx = tx.pop("s")
-        clean_tx = tx.pop("v")
-        clean_txs.append(clean_tx)
-    print(clean_txs)
+    # keep hash only
+    tx_hashes = [tx["hash"] for tx in txs]
 
-    return clean_txs
+    return tx_hashes
 
 
 def get_address_token_transfers_within_block_number_range_from_web3research(
@@ -54,6 +47,7 @@ def get_address_token_transfers_within_block_number_range_from_web3research(
     decoded_event_logs = []
     for log in event_logs:
         decoded_log = ERC20_DECODER.decode_event_log("Transfer", log)
+        del log["topics"]
         log["decoded"] = decoded_log
         decoded_event_logs.append(log)
 
@@ -80,6 +74,7 @@ def get_token_transfers_within_block_number_range_from_web3research(
     decoded_event_logs = []
     for log in event_logs:
         decoded_log = ERC20_DECODER.decode_event_log("Transfer", log)
+        del log["topics"]
         log["decoded"] = decoded_log
         decoded_event_logs.append(log)
 

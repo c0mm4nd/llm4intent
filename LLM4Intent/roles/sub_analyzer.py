@@ -5,27 +5,7 @@ from openai import Client
 from openai.types.chat import ChatCompletionMessage
 from LLM4Intent.common.utils import convert_tool, get_logger, get_prompt
 
-# FIXME)) update to our version
-ANALYZE_PROMPT = """
-Recall we are working on the following request:
-
-{task}
-
-Here is an initial fact sheet to consider:
-
-{facts}
-
-
-Here is the plan to follow as best as possible:
-
-{plan}
-
-Please output an answer in pure JSON format according to the following schema. The JSON object must be parsable as-is. DO NOT OUTPUT ANYTHING OTHER THAN JSON, AND DO NOT DEVIATE FROM THIS SCHEMA:
-{analysis_json_schema}
-"""
-
-
-class SubAnalyzer:
+class DomainExpertAnalyzer:
     def __init__(
         self,
         model: str,
@@ -39,7 +19,9 @@ class SubAnalyzer:
         self.main_perspective = main_perspective
         self.tools = tools
         self.facts = facts
-        self.system_prompt = get_prompt("sub_analyzer").format(perspective=main_perspective)
+        self.system_prompt = get_prompt("sub_analyzer").format(
+            perspective=main_perspective
+        )
         self.log = get_logger("SubAnalyzer")
         self.tool_map = {tool.__name__: tool for tool in tools}
 
@@ -63,7 +45,7 @@ class SubAnalyzer:
             tool_name = tool_call.function.name
             tool_args = json.loads(tool_call.function.arguments)
 
-            self.log.warn(f"Tool call: {tool_name} with args {tool_args}")
+            self.log.warning(f"Tool call: {tool_name} with args {tool_args}")
 
             tool = self.tool_map.get(tool_name)
             if tool:
@@ -91,15 +73,17 @@ class SubAnalyzer:
                     )
             else:
                 raise ValueError(f"Tool {tool_name} not found in tool map")
-            
+
         return tool_messages
 
-    def analyze(self, previous_chat_history, question: str, prompt: str) -> str:
+    def analyze(self, previous_chat_history: list, question: str, prompt: str) -> str:
         """
         Analyze a specific sub-question using tools and LLM capabilities
 
         Args:
+            previous_chat_history (list): The chat history so far
             question: The sub-question to analyze
+            prompt: The prompt to use for the analysis
 
         Returns:
             str: The analysis result
@@ -117,12 +101,14 @@ class SubAnalyzer:
 
         while iterations < max_iterations:
             iterations += 1
-            self.log.info(f"Iteration {iterations} for question: {question}")
+            self.log.info(
+                f"Iteration {iterations} for question: {question} ({self.main_perspective})"
+            )
 
             messages = [
-                    {"role": "system", "content": self.system_prompt},
-                    *chat_history,
-                ]
+                {"role": "system", "content": self.system_prompt},
+                *chat_history,
+            ]
 
             completion = self.client.chat.completions.create(
                 model=self.model_name,
@@ -156,7 +142,16 @@ class SubAnalyzer:
 
                     self.log.info(f"Final response: {final_response}")
 
-                    return chat_history
+                    return [
+                        {
+                            "role": "user",
+                            "content": question,
+                        },
+                        {
+                            "role": "assistant",
+                            "content": final_response,
+                        },
+                    ]
 
                 # No tool calls, add response to conversation
                 chat_history.append({"role": "assistant", "content": response.content})
@@ -176,4 +171,13 @@ class SubAnalyzer:
 
         self.log.warning(f"Final chat history: {chat_history}")
 
-        return chat_history
+        return [
+            {
+                "role": "user",
+                "content": question,
+            },
+            {
+                "role": "assistant",
+                "content": chat_history[-1]["content"],
+            },
+        ]

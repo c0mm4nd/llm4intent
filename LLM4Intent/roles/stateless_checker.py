@@ -1,9 +1,11 @@
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Mapping
 from openai import Client
 from pydantic import BaseModel, Field
 
 from LLM4Intent.common.utils import get_logger, get_prompt
+
+logger = get_logger("StatelessChecker")
 
 
 class AnalysisWeight(BaseModel):
