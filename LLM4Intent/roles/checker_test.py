@@ -1,5 +1,4 @@
 from LLM4Intent.roles.checker import CheckReport
-import openai
 
 def test_CheckReport_pydantic_to_openai():
     # try convert to openai format

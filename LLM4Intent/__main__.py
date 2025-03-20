@@ -75,7 +75,7 @@ To analyze the transaction, I would break down the analysis into several parts:
         get_address_token_transfers_within_block_number_range,
         get_contract_code_at_block_number,
         get_contract_storage_at_block_number,
-        get_contract_token_transfers_within_block_number_range,
+        get_token_transfers_within_block_number_range,
         get_contract_creation,
         get_contract_ABI,
         get_contract_basic_info,

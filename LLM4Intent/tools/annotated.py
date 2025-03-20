@@ -11,13 +11,10 @@ from LLM4Intent.tools.etherscan import (
 
 from LLM4Intent.tools.jsonrpc import (
     get_address_token_balance_at_block_number_from_jsonrpc,
-    get_address_token_transfers_within_block_number_range_from_jsonrpc,
     get_address_eth_balance_at_block_number_from_jsonrpc,
-    get_address_transactions_within_block_number_range_from_jsonrpc,
     get_contract_basic_info_from_jsonrpc,
     get_contract_code_at_block_number_from_jsonrpc,
     get_contract_storage_at_block_number_from_jsonrpc,
-    get_contract_token_transfers_within_block_number_range_from_jsonrpc,
     get_transaction_from_jsonrpc,
     get_transaction_receipt_from_jsonrpc,
     get_transaction_time_from_jsonrpc,
@@ -30,6 +27,12 @@ from LLM4Intent.tools.web2 import (
     get_function_signatures_from_signature_database,
     get_event_signatures_from_signature_database,
     search_webpages_from_tavily,
+)
+from LLM4Intent.tools.web3research import (
+    get_address_token_transfers_within_block_number_range_from_web3research,
+    get_address_transactions_within_block_number_range_from_web3research,
+    get_contract_events_within_block_number_range_from_web3research,
+    get_token_transfers_within_block_number_range_from_web3research,
 )
 
 
@@ -98,7 +101,7 @@ def get_address_token_transfers_within_block_number_range(
     Returns:
         List[Dict]: List of token transfer events
     """
-    return get_address_token_transfers_within_block_number_range_from_jsonrpc(
+    return get_address_token_transfers_within_block_number_range_from_web3research(
         address, from_block, to_block
     )
 
@@ -116,7 +119,7 @@ def get_address_transactions_within_block_number_range(
     Returns:
         List[Dict]: List of transactions
     """
-    return get_address_transactions_within_block_number_range_from_jsonrpc(
+    return get_address_transactions_within_block_number_range_from_web3research(
         address, from_block, to_block
     )
 
@@ -163,6 +166,22 @@ def get_contract_basic_info(contract_address: str, block_number: int) -> Dict:
         print(f"Error occurred: {error_result}")
         return error_result
 
+def get_contract_events_within_block_number_range(
+    contract_address: str, from_block: int, to_block: int
+) -> List[Dict]:
+    """Retrieves events for a smart contract within a block number range
+
+    Args:
+        contract_address: The address of the smart contract
+        from_block: Starting block number
+        to_block: Ending block number, at most 1000 blocks can be queried at once, i.e. to_block <= from_block + 1000
+
+    Returns:
+        List[Dict]: List of events (not decoded)
+    """
+    return get_contract_events_within_block_number_range_from_web3research(
+        contract_address, from_block, to_block
+    )
 
 def get_contract_code_at_block_number(contract_address: str, block_number: int) -> str:
     """Retrieves contract bytecode at a specific block number
@@ -197,10 +216,10 @@ def get_contract_storage_at_block_number(
     )
 
 
-def get_contract_token_transfers_within_block_number_range(
+def get_token_transfers_within_block_number_range(
     contract_address: str, from_block: int, to_block: int
 ) -> List[Dict]:
-    """Retrieves ERC20 token transfers for a contract within a block number range
+    """Retrieves ERC20 token transfers for a token contract within a block number range
 
     Args:
         contract_address: The address of the ERC20 token contract
@@ -210,7 +229,7 @@ def get_contract_token_transfers_within_block_number_range(
     Returns:
         List[Dict]: List of token transfer events
     """
-    return get_contract_token_transfers_within_block_number_range_from_jsonrpc(
+    return get_token_transfers_within_block_number_range_from_web3research(
         contract_address, from_block, to_block
     )
 

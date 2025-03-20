@@ -127,6 +127,7 @@ def get_address_eth_balance_at_block_number_from_jsonrpc(
 
 
 # 查询地址交易历史
+@DeprecationWarning
 def get_address_transactions_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[TxData]:
@@ -154,6 +155,7 @@ def get_address_transactions_within_block_number_range_from_jsonrpc(
 
 
 # 查询 ERC20 代币余额和转账历史
+@DeprecationWarning
 def get_address_token_balance_at_block_number_from_jsonrpc(
     address: str, contract_address: str, block_number: int
 ) -> int:
@@ -218,6 +220,7 @@ def get_address_token_transfers_within_block_number_range_from_jsonrpc(
 
 
 # 查询 ERC721 (NFT) 转账历史
+# @DeprecationWarning
 def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[LogReceipt]:
@@ -252,6 +255,7 @@ def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
 
 
 # 查询 ERC1155 (多代币标准) 转账历史
+# @DeprecationWarning
 def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
@@ -288,6 +292,7 @@ def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_json
 
 
 #
+# @DeprecationWarning
 def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonrpc(
     address: str, from_block_number: int, to_block_number: int
 ) -> List[FilterTrace]:
@@ -353,6 +358,7 @@ def get_contract_storage_at_block_number_from_jsonrpc(
 
 
 # 查询合约事件日志
+@DeprecationWarning
 def get_contract_events_within_block_number_range_from_jsonrpc(
     contract_address: str, from_block_number: int, to_block_number: int
 ) -> list:
