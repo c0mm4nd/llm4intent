@@ -10,19 +10,20 @@ class DomainExpertAnalyzer:
         self,
         model: str,
         client: Client,
-        facts: str,
+        known_facts: str,
         main_perspective: str,
         tools: List[Callable],
     ):
+        self.name = "DomainExpertAnalyzer"
         self.model_name = model
         self.client = client
         self.main_perspective = main_perspective
         self.tools = tools
-        self.facts = facts
+        self.facts = known_facts
         self.system_prompt = get_prompt("sub_analyzer").format(
             perspective=main_perspective
         )
-        self.log = get_logger("SubAnalyzer")
+        self.log = get_logger(f"{self.main_perspective} expert")
         self.tool_map = {tool.__name__: tool for tool in tools}
 
         # Convert tools safely with error handling
@@ -36,7 +37,7 @@ class DomainExpertAnalyzer:
                 # Skip this tool or create a simplified version if needed
         self.converted_tools = converted_tools
 
-    def call_tools(self, response: ChatCompletionMessage) -> list:
+    def call_tools(self, question: str, response: ChatCompletionMessage) -> list:
         tool_messages = [
             response.to_dict(),
         ]
@@ -45,12 +46,11 @@ class DomainExpertAnalyzer:
             tool_name = tool_call.function.name
             tool_args = json.loads(tool_call.function.arguments)
 
-            self.log.warning(f"Tool call: {tool_name} with args {tool_args}")
+            self.log.warning(f"For {question} call Tool: {tool_name} with args {tool_args}")
 
             tool = self.tool_map.get(tool_name)
             if tool:
                 try:
-                    self.log.info(f"Calling tool {tool_name} with args {tool_args}")
                     result = tool(**tool_args)
                     tool_messages.append(
                         {
@@ -123,7 +123,7 @@ class DomainExpertAnalyzer:
             # Check if the response has tool calls that need to be processed
             if response.tool_calls:
                 # Process tool calls and add results to conversation
-                tool_messages = self.call_tools(response)
+                tool_messages = self.call_tools(question, response)
                 chat_history.extend(
                     tool_messages
                 )  # Skip the first item as it's the assistant's message already in conversation
@@ -155,6 +155,8 @@ class DomainExpertAnalyzer:
 
                 # No tool calls, add response to conversation
                 chat_history.append({"role": "assistant", "content": response.content})
+
+                self.log.info(f"Response: {response.content}")
 
                 # Ask for additional analysis if not complete
                 chat_history.append(

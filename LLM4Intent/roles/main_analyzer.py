@@ -29,14 +29,14 @@ Please output an answer in pure JSON format according to the following schema. T
 
 class MetaControlAnalyzer:
     def __init__(self, model: str, client: Client, perspective: str, tips: str):
-        self.name = "analyzer"
+        self.name = "MetaControlAnalyzer"
         self.model = model
         self.client = client
         self.perspective = perspective
         self.tips = tips
 
         self.system_message = get_prompt("main_analyzer").format(perspective=self.perspective)
-        self.log = get_logger("MainAnalyzer")
+        self.log = get_logger("MetaControl")
 
         self.plan = None
 

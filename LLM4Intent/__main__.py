@@ -47,7 +47,7 @@ def collect_fact(transaction_hash: str):
 
 
 # %%
-def workflow(transaction_hash: str, hierarchical_intents: Mapping, options: List[str]):
+def workflow(transaction_hash: str, hierarchical_intents: Mapping):
     fake_chat_history = [
         {
             "role": "user",
@@ -164,7 +164,7 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
             sub_analyzer = DomainExpertAnalyzer(
                 "grok-2-latest",
                 client,
-                facts=transaction_fact,
+                known_facts=transaction_fact,
                 main_perspective=analyzer.perspective,
                 tools=all_available_tools,
             )
@@ -202,24 +202,23 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
     # }
 
     checker = StatelessChecker("grok-2-latest", client)
-    final_report = checker.check_and_summarize(
-        hierarchical_intents, main_analyzer_reports
-    )
+    check_report = checker.check(hierarchical_intents, main_analyzer_reports)
 
-    print(final_report)
+    logger.info("check_report {}".format(check_report))
 
-    # scorer = StatelessScorer("grok-2-latest", client)
-    # score = scorer.score(final_report, options)
+    scorer = StatelessScorer("grok-2-latest", client)
+    final_report = scorer.score(check_report, hierarchical_intents)
+
+    logger.warning("Final report: {}".format(final_report))
 
 
 def start():
     with open("config.json") as f:
         config = json.load(f)
 
-    options = config["options"]
     for transaction_hash in config["transactions"]:
         hierarchical_intents = json.load(open("intent_cat.json"))
-        workflow(transaction_hash, hierarchical_intents, options)
+        workflow(transaction_hash, hierarchical_intents)
 
 
 if __name__ == "__main__":

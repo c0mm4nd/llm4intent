@@ -9,6 +9,11 @@ logger = get_logger("StatelessChecker")
 
 
 class AnalysisWeight(BaseModel):
+    intent: str = Field(description="The final inferred intent category")
+    logical_reasoning: str = Field(description="The logical reasoning for the intent")
+    problems: List[str] = Field(
+        description="List of contradictions or missing logical mistakes in the analysis"
+    )
     perspective: str = Field(description="The analyzing perspective")
     weight: float = Field(
         description="Credibility weight between 0.0 and 1.0", ge=0.0, le=1.0
@@ -20,19 +25,6 @@ class CheckReport(BaseModel):
     weighted_analyses: List[AnalysisWeight] = Field(
         description="List of analyses with their assigned credibility weights"
     )
-    identified_intent: str = Field(
-        description="The most credible intent category from hierarchy of intents"
-    )
-    intent_path: List[str] = Field(
-        description="The path to the identified intent in the hierarchy of intents"
-    )
-    confidence_score: float = Field(
-        description="Overall confidence score between 0.0 and 1.0", ge=0.0, le=1.0
-    )
-    knowledge_missing: List[str] = Field(
-        description="List of knowledge missing from the analysis"
-    )
-    summary: str = Field(description="Summary of the intent analysis and justification")
 
 
 class StatelessChecker:
@@ -42,40 +34,53 @@ class StatelessChecker:
         self.client = client
         self.system_message = get_prompt("stateless_checker")
         self.log = get_logger("Checker")
-        # Load intent categories
-        with open("/Users/c0mm4nd/llm4intent/intent_cat.json", "r") as f:
-            self.intent_categories = json.load(f)
 
-    def check_and_summarize(
+    def check(
         self, hierarchical_intents: dict, perspective_analyzer_reports: dict
     ) -> CheckReport:
         chat_history = []
 
-        system_message = self.system_message.format(
-            check_report_schema=CheckReport.model_json_schema(),
-            intent_categories=json.dumps(
-                self.intent_categories, indent=2, ensure_ascii=False
-            ),
-        )
+        system_message = self.system_message.format()
 
         analysis = ""
         for perspective, report in perspective_analyzer_reports.items():
-            analysis += f"Perspective: {perspective}\n{report}\n"
+            analysis += f"Report on {perspective} perspective:\n{report}\n\n"
 
         # Format the analyzer history and current analysis
-        analysis_content = f"""
-Here is the analysis to check:
+        analysis_content = """
+Here are different perspective analysis reports for analyzing a same transaction:
 {analysis}
 
-Analyze this content, determine credibility weights for each sub-analysis, and identify which intent category 
+Analyze this content, determine credibility weights for each domain, and identify which intent category 
 from the hierarchical intents below best matches the user's intent. Provide justification for your decision.
 
 {hierarchical_intents}
-"""
+
+Provide a weighted assessment of intents and credibilities from each perspective in the analysis.
+- Review the provided analysis carefully
+- For each domain question point, assign a credibility weight (0.0-1.0) based on:
+  - Evidence quality
+  - Reasoning soundness
+  - Consistency with blockchain behaviors
+  - Presence of speculation vs. factual reasoning
+  - Calculate a confidence score for each domain question point
+
+Return your analysis in the following JSON format:
+
+{check_report_schema}
+
+Make sure your response is valid JSON that follows this schema exactly."""
 
         messages = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": analysis_content},
+            {
+                "role": "user",
+                "content": analysis_content.format(
+                    analysis=analysis,
+                    hierarchical_intents=hierarchical_intents,
+                    check_report_schema=CheckReport.model_json_schema(),
+                ),
+            },
         ]
 
         self.log.debug(messages)
@@ -83,7 +88,6 @@ from the hierarchical intents below best matches the user's intent. Provide just
             model=self.model,
             messages=messages,
             temperature=0,
-            response_format={"type": "json_object"},
         )
 
         self.log.debug(completion)
@@ -91,18 +95,9 @@ from the hierarchical intents below best matches the user's intent. Provide just
 
         # Extract the JSON part if it's wrapped in a code block
         if "```json" in response:
-            response = response.split("```json")[1].split("```")[0].strip()
+            response = response.strip("```json\n").strip("\n```")
 
-        report_data = json.loads(response)
-        report = CheckReport(**report_data)
-
-        # Save the check report to the state
-        chat_history.extend(
-            [
-                {"role": "user", "content": analysis_content},
-                {"role": "assistant", "content": response},
-            ]
-        )
+        report = CheckReport.model_validate_json(response)
 
         with open("check_report.output.md", "w") as f:
             f.write(report.model_dump_json(indent=4))
