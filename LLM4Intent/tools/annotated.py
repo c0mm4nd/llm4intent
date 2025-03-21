@@ -32,7 +32,11 @@ from LLM4Intent.tools.web3research import (
     get_address_token_transfers_within_block_number_range_from_web3research,
     get_address_transactions_within_block_number_range_from_web3research,
     get_contract_events_within_block_number_range_from_web3research,
+    get_token_transfers_from_address_within_block_number_range_from_web3research,
+    get_token_transfers_to_address_within_block_number_range_from_web3research,
     get_token_transfers_within_block_number_range_from_web3research,
+    get_transactions_from_address_within_block_number_range_from_web3research,
+    get_transactions_to_address_within_block_number_range_from_web3research,
 )
 
 
@@ -105,6 +109,36 @@ def get_address_token_transfers_within_block_number_range(
         address, from_block, to_block
     )
 
+def get_token_transfers_from_address_within_block_number_range(
+    address: str, start_block: int, end_block: int
+) -> List[Dict]:
+    """Retrieves ERC20 token transfers from an address within a block number range
+
+    Args:
+        address: The address to get transfers from
+        start_block: Starting block number
+        end_block: Ending block number
+
+    Returns:
+        List[Dict]: List of token transfer events
+    """
+    return get_token_transfers_from_address_within_block_number_range_from_web3research(address, start_block, end_block)
+
+def get_token_transfers_to_address_within_block_number_range(
+    address: str, start_block: int, end_block: int
+) -> List[Dict]:
+    """Retrieves ERC20 token transfers to an address within a block number range
+
+    Args:
+        address: The address to get transfers to
+        start_block: Starting block number
+        end_block: Ending block number
+
+    Returns:
+        List[Dict]: List of token transfer events
+    """
+    return get_token_transfers_to_address_within_block_number_range_from_web3research(address, start_block, end_block)
+
 
 def get_address_transactions_within_block_number_range(
     address: str, from_block: int, to_block: int
@@ -121,6 +155,42 @@ def get_address_transactions_within_block_number_range(
     """
     return get_address_transactions_within_block_number_range_from_web3research(
         address, from_block, to_block
+    )
+
+
+def get_transactions_from_address_within_block_number_range(
+    address: str, start_block: int, end_block: int
+) -> List[Dict]:
+    """Retrieves transactions from an address within a block number range
+
+    Args:
+        address: The address to get transactions from
+        start_block: Starting block number
+        end_block: Ending block number
+
+    Returns:
+        List[Dict]: List of transactions
+    """
+    return get_transactions_from_address_within_block_number_range_from_web3research(
+        address, start_block, end_block
+    )
+
+
+def get_transactions_to_address_within_block_number_range(
+    address: str, start_block: int, end_block: int
+) -> List[Dict]:
+    """Retrieves transactions to an address within a block number range
+
+    Args:
+        address: The address to get transactions to
+        start_block: Starting block number
+        end_block: Ending block number
+
+    Returns:
+        List[Dict]: List of transactions
+    """
+    return get_transactions_to_address_within_block_number_range_from_web3research(
+        address, start_block, end_block
     )
 
 
@@ -166,6 +236,7 @@ def get_contract_basic_info(contract_address: str, block_number: int) -> Dict:
         print(f"Error occurred: {error_result}")
         return error_result
 
+
 def get_contract_events_within_block_number_range(
     contract_address: str, from_block: int, to_block: int
 ) -> List[Dict]:
@@ -182,6 +253,7 @@ def get_contract_events_within_block_number_range(
     return get_contract_events_within_block_number_range_from_web3research(
         contract_address, from_block, to_block
     )
+
 
 def get_contract_code_at_block_number(contract_address: str, block_number: int) -> str:
     """Retrieves contract bytecode at a specific block number
@@ -217,7 +289,7 @@ def get_contract_storage_at_block_number(
 
 
 def get_token_transfers_within_block_number_range(
-    contract_address: str, from_block: int, to_block: int
+    erc20_contract_address: str, from_block: int, to_block: int
 ) -> List[Dict]:
     """Retrieves ERC20 token transfers for a token contract within a block number range
 
@@ -230,8 +302,9 @@ def get_token_transfers_within_block_number_range(
         List[Dict]: List of token transfer events
     """
     return get_token_transfers_within_block_number_range_from_web3research(
-        contract_address, from_block, to_block
+        erc20_contract_address, from_block, to_block
     )
+
 
 
 """-------------etherscan-------------"""
@@ -349,7 +422,7 @@ def get_contract_ABI(contract_address: str) -> dict:
     abi = get_verified_contract_abi_from_etherscan(contract_address)
     if not abi:
         abi = get_contract_ABI_from_whatsabi(contract_address)
-        
+
     return abi
 
 
