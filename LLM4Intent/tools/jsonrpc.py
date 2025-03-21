@@ -114,7 +114,7 @@ def get_address_eth_balance_at_block_number_from_jsonrpc(
 ) -> int:
     """
     Get the ETH balance of an address at a specific block number.
-    
+
     Args:
         address (str): The Ethereum address to query.
         block_number (int): The block number to check the balance at.
@@ -138,7 +138,7 @@ def get_address_transactions_within_block_number_range_from_jsonrpc(
         address (str): The Ethereum address to query.
         from_block_number (int): The starting block number.
         to_block_number (int): The ending block number.
-    
+
     Returns:
         List[TxData]: A list of transactions of the address within the specified block
             number range.
@@ -166,7 +166,7 @@ def get_address_token_balance_at_block_number_from_jsonrpc(
         address (str): The Ethereum address to query.
         contract_address (str): The ERC20 token contract address.
         block_number (int): The block number to check the balance at.
-    
+
     Returns:
         int: The ERC20 token balance of the address at the specified block number.
     """
@@ -196,7 +196,7 @@ def get_address_token_transfers_within_block_number_range_from_jsonrpc(
         address (str): The Ethereum address to query.
         from_block_number (int): The starting block number.
         to_block_number (int): The ending block number.
-        
+
     Returns:
         List[LogReceipt]: A list of ERC20 token transfer logs within the specified block number range.
     """
@@ -231,7 +231,7 @@ def get_address_ERC721_NFT_transfers_within_block_number_range_from_jsonrpc(
         address (str): The Ethereum address to query.
         from_block_number (int): The starting block number.
         to_block_number (int): The ending block number.
-        
+
     Returns:
         List[LogReceipt]: A list of ERC721 token transfer logs within the specified block number range.
     """
@@ -261,12 +261,12 @@ def get_address_ERC1155_NFT_single_transfers_within_block_number_range_from_json
 ) -> List[FilterTrace]:
     """
     Get all ERC1155 NFT single transfers of an address within a block number range.
-    
+
     Args:
         address (str): The Ethereum address to query.
         from_block_number (int): The starting block number.
         to_block_number (int): The ending block number.
-        
+
     Returns:
         List[FilterTrace]: A list of ERC1155 NFT single transfer logs within the specified block number range.
     """
@@ -303,7 +303,7 @@ def get_address_ERC1155_NFT_batch_transfers_within_block_number_range_from_jsonr
         address (str): The Ethereum address to query.
         from_block_number (int): The starting block number.
         to_block_number (int): The ending block number.
-    
+
     Returns:
         List[FilterTrace]: A list of ERC1155 NFT batch transfer logs within the specified block number range.
     """
@@ -342,7 +342,7 @@ def get_contract_code_at_block_number_from_jsonrpc(
 
     Returns:
         str: The code of the contract at the specified block
-            number.    
+            number.
     """
     contract_address = Web3.to_checksum_address(contract_address)
     return w3.eth.get_code(contract_address, block_identifier=block_number).hex()
@@ -528,7 +528,10 @@ IMPLEMENTATION_SLOT = (
 def check_is_ERC1967_proxy(contract_address: str, block_number: int) -> Optional[str]:
     """检查合约是否是 EIP-1967 Proxy"""
 
-    if not "f4" in w3.eth.get_code(contract_address, block_identifier=block_number).hex():
+    if (
+        not "f4"
+        in w3.eth.get_code(contract_address, block_identifier=block_number).hex()
+    ):
         return None
 
     storage_value = w3.eth.get_storage_at(contract_address, IMPLEMENTATION_SLOT)
@@ -551,7 +554,7 @@ def get_contract_basic_info_from_jsonrpc(
     is_ERC1967_proxy = check_is_ERC1967_proxy(contract_address, block_number)
 
     default_name = (
-        "Not available"
+        "No Name"
         if not is_ERC1167_proxy
         else "ERC1167Proxy" if not is_ERC1967_proxy else "ERC1967Proxy"
     )
@@ -573,7 +576,7 @@ def get_contract_basic_info_from_jsonrpc(
             },
             block_number,
         )
-        or "Not available",
+        or "Not Proxy",
         total_supply=_try_w3_call_fetch_int(
             {
                 "to": contract_address,
@@ -581,7 +584,7 @@ def get_contract_basic_info_from_jsonrpc(
             },
             block_number,
         )
-        or "Not available",
+        or "No Total Supply",
         decimals=_try_w3_call_fetch_int(
             {
                 "to": contract_address,
@@ -589,7 +592,7 @@ def get_contract_basic_info_from_jsonrpc(
             },
             block_number,
         )
-        or "Not available",
+        or "No Decimals",
         owner=_try_w3_call_fetch_address(
             {
                 "to": contract_address,
@@ -597,9 +600,10 @@ def get_contract_basic_info_from_jsonrpc(
             },
             block_number,
         )
-        or "Not available",
+        or "No Explicit Owner",
         may_self_destructed=w3.eth.get_code(contract_address, block_number) == b"",
     )
+
 
 def get_transaction_time_from_jsonrpc(transaction_hash: str) -> str:
     """Retrieves the time of the transaction (in UTC) from the transaction data
@@ -617,6 +621,4 @@ def get_transaction_time_from_jsonrpc(transaction_hash: str) -> str:
 
     print(timestamp)
 
-    return datetime.fromtimestamp(int(timestamp)).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
+    return datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d %H:%M:%S")
