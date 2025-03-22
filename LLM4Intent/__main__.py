@@ -5,6 +5,7 @@ import concurrent.futures
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 from dotenv import load_dotenv
 from openai import Client, OpenAI
+import argparse
 
 from LLM4Intent.common.utils import get_logger
 from LLM4Intent.roles.main_analyzer import MetaControlAnalyzer
@@ -213,11 +214,19 @@ NEVER try decoding the raw data directly by yourself, ALWAYS use the tools provi
 
 
 def start():
-    with open("config.json") as f:
-        config = json.load(f)
+    # read config from argparser
+    parser = argparse.ArgumentParser(description="LLM4Intent")
+    parser.add_argument("--config", type=str, default="config.json")
+    args = parser.parse_args()
 
-    for transaction_hash in config["transactions"]:
-        hierarchical_intents = json.load(open("intent_cat.json"))
+    # read config from file
+    config = json.load(open(args.config))
+    # read transactions from the file
+    txs = config.get("txs", []) + config.get("tfs", [])
+    hierarchical_intents = json.load(open("intent_cat.json"))
+
+    for transaction_hash in txs:
+        print(f"Analyzing transaction: {transaction_hash}")
         workflow(transaction_hash, hierarchical_intents)
 
 

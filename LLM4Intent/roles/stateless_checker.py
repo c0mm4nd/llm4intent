@@ -9,17 +9,16 @@ logger = get_logger("StatelessChecker")
 
 
 class AnalysisWeight(BaseModel):
+    perspective: str = Field(description="The analyzing perspective")
     intent: str = Field(description="The final inferred intent category")
-    logical_reasoning: str = Field(description="The logical reasoning for the intent")
+    intent_reasoning: str = Field(description="The logical reasoning for the intent")
+    credibility: float = Field(
+        description="Credibility weight between 0.0 and 1.0", ge=0.0, le=1.0
+    )
+    credibility_reasoning: str = Field(description="Reasoning for the assigned weight")
     problems: List[str] = Field(
         description="List of contradictions or missing logical mistakes in the analysis"
     )
-    perspective: str = Field(description="The analyzing perspective")
-    weight: float = Field(
-        description="Credibility weight between 0.0 and 1.0", ge=0.0, le=1.0
-    )
-    reasoning: str = Field(description="Reasoning for the assigned weight")
-
 
 class CheckReport(BaseModel):
     weighted_analyses: List[AnalysisWeight] = Field(
