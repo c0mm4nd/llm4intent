@@ -22,10 +22,27 @@ def get_address_transactions_within_block_number_range_from_web3research(
         )
     )
 
-    # keep hash only
-    tx_hashes = [tx["hash"] for tx in txs]
+    return [
+        {
+            "hash": tx["hash"],
+            "nonce": tx["nonce"],
+            "from": tx["from"],
+            "to": tx["to"],
+            "value": tx["value"],
+            "gas": tx["gas"],
+            "gasPrice": tx["gasPrice"],
+            "input": tx["input"],
+            "blockNumber": tx["blockNumber"],
+            "blockTimestamp": tx["blockTimestamp"],
+            **(
+                {"contractAddress": tx["contractAddress"]}
+                if tx["contractAddress"] is not None
+                else {}
+            ),
+        }
+        for tx in txs
+    ]
 
-    return tx_hashes
 
 def get_transactions_from_address_within_block_number_range_from_web3research(
     address: str, start_block: int, end_block: int
@@ -40,10 +57,27 @@ def get_transactions_from_address_within_block_number_range_from_web3research(
         )
     )
 
-    # keep hash only
-    tx_hashes = [tx["hash"] for tx in txs]
+    return [
+        {
+            "hash": tx["hash"],
+            "nonce": tx["nonce"],
+            "from": tx["from"],
+            "to": tx["to"],
+            "value": tx["value"],
+            "gas": tx["gas"],
+            "gasPrice": tx["gasPrice"],
+            "input": tx["input"],
+            "blockNumber": tx["blockNumber"],
+            "blockTimestamp": tx["blockTimestamp"],
+            **(
+                {"contractAddress": tx["contractAddress"]}
+                if tx["contractAddress"] is not None
+                else {}
+            ),
+        }
+        for tx in txs
+    ]
 
-    return tx_hashes
 
 def get_transactions_to_address_within_block_number_range_from_web3research(
     address: str, start_block: int, end_block: int
@@ -58,10 +92,29 @@ def get_transactions_to_address_within_block_number_range_from_web3research(
         )
     )
 
-    # keep hash only
-    tx_hashes = [tx["hash"] for tx in txs]
+    # keep hash, nonce, from, to, value, input, gas, gasPrice, blockNumber, timestamp, contrac only
 
-    return tx_hashes
+    return [
+        {
+            "hash": tx["hash"],
+            "nonce": tx["nonce"],
+            "from": tx["from"],
+            "to": tx["to"],
+            "value": tx["value"],
+            "gas": tx["gas"],
+            "gasPrice": tx["gasPrice"],
+            "input": tx["input"],
+            "blockNumber": tx["blockNumber"],
+            "blockTimestamp": tx["blockTimestamp"],
+            **(
+                {"contractAddress": tx["contractAddress"]}
+                if tx["contractAddress"] is not None
+                else {}
+            ),
+        }
+        for tx in txs
+    ]
+
 
 def get_address_token_transfers_within_block_number_range_from_web3research(
     address: str, start_block: int, end_block: int
@@ -77,7 +130,8 @@ def get_address_token_transfers_within_block_number_range_from_web3research(
             address=address,
             start_block=start_block,
             end_block=end_block,
-        )
+        ),
+        limit=None,
     )
     decoded_event_logs = []
     for log in event_logs:
@@ -89,6 +143,7 @@ def get_address_token_transfers_within_block_number_range_from_web3research(
     print(decoded_event_logs)
 
     return decoded_event_logs
+
 
 def get_token_transfers_from_address_within_block_number_range_from_web3research(
     address: str, start_block: int, end_block: int
@@ -100,8 +155,12 @@ def get_token_transfers_from_address_within_block_number_range_from_web3research
         where="topic0 = {Transfer_topic} and "
         " topic1 = {address} "
         " and (blockNumber >= {start_block} and blockNumber <= {end_block})".format(
-            Transfer_topic=Transfer_topic, address=address, start_block=start_block, end_block=end_block
-        )
+            Transfer_topic=Transfer_topic,
+            address=address,
+            start_block=start_block,
+            end_block=end_block,
+        ),
+        limit=None,
     )
     decoded_event_logs = []
     for log in event_logs:
@@ -113,6 +172,7 @@ def get_token_transfers_from_address_within_block_number_range_from_web3research
     print(decoded_event_logs)
 
     return decoded_event_logs
+
 
 def get_token_transfers_to_address_within_block_number_range_from_web3research(
     address: str, start_block: int, end_block: int
@@ -124,8 +184,12 @@ def get_token_transfers_to_address_within_block_number_range_from_web3research(
         where="topic0 = {Transfer_topic} and "
         " topic2 = {address} "
         " and (blockNumber >= {start_block} and blockNumber <= {end_block})".format(
-            Transfer_topic=Transfer_topic, address=address, start_block=start_block, end_block=end_block
-        )
+            Transfer_topic=Transfer_topic,
+            address=address,
+            start_block=start_block,
+            end_block=end_block,
+        ),
+        limit=None,
     )
     decoded_event_logs = []
     for log in event_logs:
@@ -138,10 +202,11 @@ def get_token_transfers_to_address_within_block_number_range_from_web3research(
 
     return decoded_event_logs
 
+
 def get_token_transfers_within_block_number_range_from_web3research(
     contract_address: str, start_block: int, end_block: int
 ):
-    contract_address = Hash("0x000000000000000000000000" + contract_address.removeprefix("0x"))
+    contract_address = Address(contract_address)
 
     Transfer_topic = Hash(ERC20_DECODER.get_event_topic("Transfer"))
     event_logs = w3r.eth(backend=os.getenv("W3R_BACKEND")).events(
@@ -151,7 +216,8 @@ def get_token_transfers_within_block_number_range_from_web3research(
             contract_address=contract_address,
             start_block=start_block,
             end_block=end_block,
-        )
+        ),
+        limit=None,
     )
     decoded_event_logs = []
     for log in event_logs:
@@ -164,6 +230,7 @@ def get_token_transfers_within_block_number_range_from_web3research(
 
     return decoded_event_logs
 
+
 def get_contract_events_within_block_number_range_from_web3research(
     contract_address: str, start_block: int, end_block: int
 ):
@@ -171,8 +238,11 @@ def get_contract_events_within_block_number_range_from_web3research(
 
     event_logs = w3r.eth(backend=os.getenv("W3R_BACKEND")).events(
         where="address = {contract_address} and blockNumber >= {start_block} and blockNumber <= {end_block}".format(
-            contract_address=contract_address, start_block=start_block, end_block=end_block
-        )
+            contract_address=contract_address,
+            start_block=start_block,
+            end_block=end_block,
+        ),
+        limit=None,
     )
     print(event_logs)
 
